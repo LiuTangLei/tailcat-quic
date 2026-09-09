@@ -339,20 +339,31 @@ func TestTailcat(t *testing.T) {
 	// No sleep here: a successful Ping means the server has fully
 	// added us as a peer and we may dial immediately.
 
-	ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	conn, err := c.DialTCPPort(ctx, 80)
-	if err != nil {
-		t.Fatalf("UserDial = %v, %v", conn, err)
+	// Discovery is not an established H3 session. Give each application
+	// operation its own bounded deadline: reusing the first dial's context
+	// after its stream drains made the independent forwarding assertion
+	// inherit an almost-expired budget on instrumented macOS runners.
+	readGreeting := func(dst netip.AddrPort, want string) {
+		t.Helper()
+		ctx, cancel := context.WithTimeout(t.Context(), 20*time.Second)
+		defer cancel()
+		conn, err := c.DialTCP(ctx, dst)
+		if err != nil {
+			t.Fatalf("DialTCP(%v): %v", dst, err)
+		}
+		defer conn.Close()
+		deadline, _ := ctx.Deadline()
+		if err := conn.SetDeadline(deadline); err != nil {
+			t.Fatal(err)
+		}
+		all, err := io.ReadAll(conn)
+		if err != nil || string(all) != want {
+			t.Fatalf("greeting from %v = %q, %v; want %q", dst, all, err, want)
+		}
 	}
-	all, err := io.ReadAll(conn)
-	t.Logf("Got: %q, %v", all, err)
-
-	// And dialing arbitrary IPs...
-	conn, err = c.DialTCP(ctx, netip.MustParseAddrPort("192.0.2.1:123"))
-	if err != nil {
-		t.Fatalf("DialTCP = %v, %v", conn, err)
-	}
+	readGreeting(netip.AddrPortFrom(tcAddrForKey(priv.Public()), 80), "Hello from port 80\n")
+	// Arbitrary-address forwarding is a separate application operation.
+	readGreeting(netip.MustParseAddrPort("192.0.2.1:123"), "Hello from relay\n")
 
 }
 
@@ -658,8 +669,8 @@ func TestUDPForwardIdleTimeout(t *testing.T) {
 
 	handlerDone := make(chan struct{})
 	s := &Server{
-		Logf:           mkLogger(t, "server"),
-		Region:         reg,
+		Logf:   mkLogger(t, "server"),
+		Region: reg,
 		// Real H3 traffic needs scheduling headroom under the race detector.
 		// Still require idle cleanup within the five-second failure deadline.
 		UDPIdleTimeout: 500 * time.Millisecond,
