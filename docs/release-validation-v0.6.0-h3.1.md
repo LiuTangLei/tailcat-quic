@@ -21,7 +21,7 @@ Additional tests reject legacy/unsupported connection-code versions, duplicate C
 
 `FuzzH3ConnectionCode` completed **92,983 executions** in the recorded bounded fuzz run, with no crash or accepted-invalid-credential invariant failure. This is not exhaustive coverage of every byte string.
 
-Disconnected and abandoned client identities can be reclaimed under capacity pressure after a grace period. A regression cycles through more than two full capacity windows while retaining an established session. Recent handshakes and established sessions are protected, retained identities remain bounded, and callback tests exercise concurrent updates without taking the policy mutex.
+Disconnected and abandoned client identities can be reclaimed under capacity pressure after a grace period. A regression cycles through more than two full capacity windows while retaining an established session. Recent handshakes and established sessions are protected, retained identities remain bounded, and callback tests exercise concurrent updates without taking the policy mutex. Retirement atomically rechecks/reserves the lease, so a session established after a candidate scan cannot be erased by stale cleanup. The new establishment-versus-retirement regression passed 10,000 races across five instrumented test runs.
 
 ## Race and static checks
 

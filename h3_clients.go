@@ -15,6 +15,10 @@ import (
 // of retained identities. Established sessions are never reclamation targets.
 const h3ClientGrace = time.Minute
 
+// No real timestamp/state combination uses this tombstone. Retirement and a
+// concurrent session callback must have a single atomic winner.
+const h3LeaseRetired = ^uint64(0)
+
 type h3ClientLease struct {
 	// A packed timestamp and state are published together so a fresh session
 	// event cannot be paired with a stale timestamp by admission cleanup.
@@ -28,18 +32,41 @@ func newH3ClientLease(now time.Time) *h3ClientLease {
 	return lease
 }
 
-func (l *h3ClientLease) update(state wgengine.PeerWireGuardState, now time.Time) {
-	l.activity.Store(uint64(now.Unix())<<3 | uint64(state)&7)
+func (l *h3ClientLease) update(state wgengine.PeerWireGuardState, now time.Time) bool {
+	next := uint64(now.Unix())<<3 | uint64(state)&7
+	for {
+		previous := l.activity.Load()
+		if previous == h3LeaseRetired {
+			return false
+		}
+		if l.activity.CompareAndSwap(previous, next) {
+			return true
+		}
+	}
 }
 
 func (l *h3ClientLease) reclaimable(now time.Time) (time.Time, bool) {
 	v := l.activity.Load()
 	state := wgengine.PeerWireGuardState(v & 7)
 	changed := time.Unix(int64(v>>3), 0)
-	if state == wgengine.PeerWireGuardStateEstablished || now.Sub(changed) < h3ClientGrace {
+	if v == h3LeaseRetired || state == wgengine.PeerWireGuardStateEstablished || now.Sub(changed) < h3ClientGrace {
 		return changed, false
 	}
 	return changed, true
+}
+
+// claimRetirement rechecks the candidate at the point of retirement. A peer
+// becoming established (or starting a recent handshake) between the scan and
+// this CAS cannot be reclaimed. A losing callback cannot resurrect a retired
+// lease. Returning false conservatively leaves admission to a later retry.
+func (l *h3ClientLease) claimRetirement(now time.Time) bool {
+	v := l.activity.Load()
+	state := wgengine.PeerWireGuardState(v & 7)
+	changed := time.Unix(int64(v>>3), 0)
+	if v == h3LeaseRetired || state == wgengine.PeerWireGuardStateEstablished || now.Sub(changed) < h3ClientGrace {
+		return false
+	}
+	return l.activity.CompareAndSwap(v, h3LeaseRetired)
 }
 
 // Called from the engine's session callback, potentially under transport locks.
@@ -68,6 +95,10 @@ func (b *locoBackend) retireH3ClientLocked(now time.Time) (key.NodePublic, bool)
 	}
 	if candidate.IsZero() {
 		return candidate, false
+	}
+	value, ok := b.clientLeases.Load(candidate)
+	if !ok || !value.(*h3ClientLease).claimRetirement(now) {
+		return key.NodePublic{}, false
 	}
 	delete(b.clients, candidate)
 	b.clientLeases.Delete(candidate)
