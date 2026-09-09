@@ -82,7 +82,8 @@ func newH3Factory(lb *locoBackend) (*quicbind.Factory, error) {
 	return quicbind.NewFactoryWithCertificate(quicbind.Config{
 		Version: 2, Payload: "ip", IO: "magicsock",
 		LocalPublicKey: lb.pub.String(),
-		HTTP3:          true, AutoTrust: true, Server: lb.isServer, BBRv3: true,
+		HTTP3:          true, AutoTrust: true, Server: lb.isServer, BBRv3: true, TCPMSS: 1080,
+		TCPStreams: true, TCPHandler: lb.tcpHandler, TCPNodeAddress: h3NodeAddress,
 		AuthenticationSecret: [32]byte(lb.presharedKey),
 		HTTP3URL:             "https://tailcat.invalid/.well-known/masque/ip/*/*/",
 	}, tls.Certificate{Certificate: [][]byte{der}, PrivateKey: private})

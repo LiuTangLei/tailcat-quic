@@ -85,6 +85,7 @@ import (
 	"tailscale.com/wgengine/router"
 	"tailscale.com/wgengine/wgcfg"
 	"tailscale.com/wgengine/wgtransport"
+	"tailscale.com/wgengine/wgtransport/quicbind"
 )
 
 // Verbose controls whether extra diagnostic logging is emitted during
@@ -329,6 +330,8 @@ type locoBackend struct {
 	serverDiscoPub key.DiscoPublic // non-zero if we're a client (server's disco key)
 	presharedKey   PresharedKey
 	isServer       bool
+	h3Backend      *quicbind.Backend // initialized before engine startup
+	tcpHandler     func([32]byte, netip.AddrPort) func(net.Conn)
 	bootstrapNonce [32]byte      // fresh per client lifetime; binds bootstrap acknowledgments
 	meowSlots      chan struct{} // bounded admission workers
 	admissionMu    sync.Mutex    // serializes admission and retired-peer cleanup
@@ -599,6 +602,7 @@ func (s *Server) Start() error {
 	sys.Set(store)
 
 	lb.isServer = true
+	lb.tcpHandler = s.h3TCPHandler(lb)
 	lb.onDERPRecv = func(regionID tailcfg.DERPRegionID, src key.NodePublic, pkt []byte) bool {
 		if !isH3Meow(pkt) {
 			return IsMeowPacket(pkt) // discard legacy unauthenticated bootstrap
@@ -804,6 +808,9 @@ func (s *Server) Close() error {
 // this side closed first instead parks in TIME-WAIT and would block
 // DrainTCP until the TIME-WAIT timer fires.
 func (s *Server) DrainTCP(ctx context.Context) error {
+	if s.lb != nil && s.lb.h3Backend != nil {
+		if err := s.lb.h3Backend.DrainTCPStreams(ctx); err != nil { return err }
+	}
 	// Wait blocks until the endpoint is fully closed (EventHUp).
 	// Non-TCP endpoints return immediately. A waiter goroutine may
 	// outlive an early ctx cancellation; it exits with the process
@@ -834,6 +841,9 @@ func (s *Server) DrainTCP(ctx context.Context) error {
 // server's FIN before it is ever transmitted, leaving the server
 // retransmitting its FIN to a dead peer until it gives up.
 func (c *Client) DrainTCP(ctx context.Context) error {
+	if c.lb != nil && c.lb.h3Backend != nil {
+		if err := c.lb.h3Backend.DrainTCPStreams(ctx); err != nil { return err }
+	}
 	for {
 		busy := false
 		for _, ep := range tcpipStackOf(c.lb.ns).RegisteredEndpoints() {
@@ -1766,7 +1776,7 @@ func createEngine(logf logger.Logf, lb *locoBackend) (err error) {
 	if err != nil {
 		return err
 	}
-	conf.Transport = wgtransport.Config{Mode: wgtransport.HTTP3IP, Factory: factory}
+	conf.Transport = wgtransport.Config{Mode: wgtransport.HTTP3IP, Factory: instrumentH3Factory(h3CaptureFactory{Factory: factory, lb: lb})}
 	conf.TransportSource = "tailcat-h3"
 	conf.TransportRevision = "h3-v1-bbrv3"
 	netns.SetEnabled(false)
@@ -1943,7 +1953,7 @@ func (c *Client) initLocked() error {
 		return ok
 	}
 	dialer.NetstackDialTCP = func(ctx context.Context, dst netip.AddrPort) (net.Conn, error) {
-		return ns.DialContextTCP(ctx, dst)
+		return lb.h3Backend.DialTCPStream(ctx, lb.serverPub.Raw32(), dst)
 	}
 	dialer.NetstackDialUDP = func(ctx context.Context, dst netip.AddrPort) (net.Conn, error) {
 		udpConn, err := ns.DialContextUDPWithBind(ctx, lb.addr, dst)
@@ -2199,7 +2209,7 @@ func (c *Client) DialTCP(ctx context.Context, ap netip.AddrPort) (net.Conn, erro
 		copy(a[12:], a4[:])
 		ap = netip.AddrPortFrom(netip.AddrFrom16(a), ap.Port())
 	}
-	return c.lb.ns.DialContextTCP(ctx, ap)
+	return c.lb.h3Backend.DialTCPStream(ctx, c.lb.serverPub.Raw32(), ap)
 }
 
 // DialUDPPort opens a connected UDP packet connection to the given port on the

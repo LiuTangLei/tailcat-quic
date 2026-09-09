@@ -35,7 +35,6 @@ import (
 	"github.com/tailscale/tailcat"
 	"go4.org/mem"
 	xmaps "golang.org/x/exp/maps"
-	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
 	"tailscale.com/derp/derpserver"
 	"tailscale.com/envknob"
 	"tailscale.com/net/socks5"
@@ -913,7 +912,11 @@ func clientMode(logf logger.Logf, connStr, optDest string) error {
 		}
 		// Half-close: tell the server we're done sending so it can
 		// respond to a complete request, netcat style.
-		if err := c.(*gonet.TCPConn).CloseWrite(); err != nil {
+		halfCloser, ok := c.(interface{ CloseWrite() error })
+		if !ok {
+			log.Fatal("connection does not support write half-close")
+		}
+		if err := halfCloser.CloseWrite(); err != nil {
 			log.Fatal(err)
 		}
 	}()
@@ -933,9 +936,12 @@ func clientMode(logf logger.Logf, connStr, optDest string) error {
 	// can discard it before it's transmitted, leaving the server
 	// retransmitting its FIN to nobody until it gives up. Wait for
 	// the ack to drain, with a cap in case the server is gone.
+	_ = c.Close()
 	drainCtx, drainCancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer drainCancel()
-	cl.DrainTCP(drainCtx)
+	if err := cl.DrainTCP(drainCtx); err != nil {
+		return fmt.Errorf("drain final stream data: %w", err)
+	}
 	return nil
 }
 

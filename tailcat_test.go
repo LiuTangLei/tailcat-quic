@@ -891,19 +891,20 @@ func TestHalfClose(t *testing.T) {
 		t.Fatalf("response = %q; want %q", resp, want)
 	}
 
-	// The packet filter (ServedTCPPorts) must drop SYNs to unserved
-	// ports before they reach OnTCP, whose handler above would accept
-	// any port. A filter drop is silent, so the dial must ride out
-	// the context deadline rather than fail fast with a RST.
-	ctx2, cancel2 := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	// HTTP/3 streams must preserve ServedTCPPorts authorization before OnTCP,
+	// whose handler above accepts any port. Unlike IP SYN filtering, denied
+	// CONNECT streams return a protocol error rather than waiting for an RTO.
+	// Wait for the explicit protocol denial; a 100 ms cancellation races
+	// the response on instrumented CI and cannot distinguish authorization.
+	ctx2, cancel2 := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel2()
 	c2, err := c.DialTCPPort(ctx2, 81)
 	if err == nil {
 		c2.Close()
 		t.Fatal("dial to filtered port 81 unexpectedly succeeded")
 	}
-	if ctx2.Err() == nil {
-		t.Fatalf("dial to filtered port 81 failed fast (%v); want silent drop until context deadline", err)
+	if err == nil || !strings.Contains(err.Error(), "not served") {
+		t.Fatalf("filtered port 81 did not report a service denial: %v", err)
 	}
 }
 

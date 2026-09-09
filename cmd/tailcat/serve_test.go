@@ -144,28 +144,18 @@ func TestServePorts(t *testing.T) {
 		t.Errorf("served port echoed %q; want %q", got, payload)
 	}
 
-	// The packet filter silently drops SYNs to unserved ports (no
-	// RST; see Server.ServedTCPPorts), so instead of waiting out the
-	// client's whole dial timeout, watch the verbose server's filter
-	// log for the drop and then check the client never got the echo.
+	// CONNECT byte streams enforce the same ServedTCPPorts policy before
+	// dispatch, and report denial promptly instead of silently dropping a SYN.
 	client := e.cmd("--key=new", "--derpmap-url="+e.derpMapURL, addr, strconv.Itoa(unservedPort))
 	client.Stdin = strings.NewReader(payload)
-	var clientOut bytes.Buffer
-	client.Stdout = &clientOut
-	if err := client.Start(); err != nil {
-		t.Fatal(err)
+	var clientOut, clientErr bytes.Buffer
+	client.Stdout, client.Stderr = &clientOut, &clientErr
+	if err := client.Run(); err == nil {
+		t.Fatal("client to unserved port unexpectedly succeeded")
 	}
-	dropRx := regexp.MustCompile(fmt.Sprintf(`Drop: TCP\{.*\]:%d\}`, unservedPort))
-	deadline := time.Now().Add(30 * time.Second)
-	for !dropRx.MatchString(serverStderr.String()) {
-		if time.Now().After(deadline) {
-			client.Process.Kill()
-			t.Fatalf("server never logged dropping the SYN to unserved port %v; server stderr:\n%s", unservedPort, serverStderr.String())
-		}
-		time.Sleep(50 * time.Millisecond)
+	if !strings.Contains(clientErr.String(), "not served") {
+		t.Fatalf("missing explicit H3 service denial: %s", clientErr.String())
 	}
-	client.Process.Kill()
-	client.Wait()
 	if clientOut.Len() > 0 {
 		t.Errorf("client to unserved port %v got output %q; want none", unservedPort, clientOut.String())
 	}

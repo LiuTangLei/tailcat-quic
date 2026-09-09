@@ -1,5 +1,20 @@
 # tailcat changelog
 
+## v0.6.0-h3.2 (2026-09-10)
+
+Performance release based on official tailcat v0.6.0; both endpoints should upgrade together.
+
+- Carry TCP proxy connections on reliable HTTP/3 CONNECT streams in the authenticated QUIC session, avoiding a nested user-space TCP data path. UDP retains CONNECT-IP DATAGRAM semantics; BBRv3 remains the default on both endpoints.
+- Preserve node/connection-secret authentication, per-service port restrictions, SSH peer identity and live revocation for the new TCP stream path. Public TLS connections cannot open an unauthenticated proxy.
+- Implement bounded resumable-deadline queues, concurrent net.Conn contracts, TCP half-close, and real final-byte/FIN acknowledgment for one-shot shutdown.
+- Keep long-lived SSH/file streams on their QUIC connection with packet-key updates; do not truncate them by periodically replacing the entire connection.
+- Send connection-close notifications before closing magicsock, and release readers blocked behind full queues on peer shutdown.
+- Fix incomplete-fragment capacity starvation while retaining bounded memory, and avoid unnecessary TCP fragmentation on the legacy IP path.
+- Add official-WG versus H3 two-host benchmarks, role reversal, full-data hashes, UDP API and forced-DERP checks. The recorded candidate exceeded official WG throughput on the tested path; loaded latency still has spikes and is not guaranteed to match WG.
+- Pin the published transport dependencies to `tailscale v1.102.3-tailcat.2` and `quic-go v0.62.0-tailcat.2`.
+
+See [the v0.6.0-h3.2 validation report](docs/release-validation-v0.6.0-h3.2.md) for exact measurements, methodology and limitations.
+
 ## v0.6.0-h3.1 (2026-09-09)
 
 First independent H3-only release, based on official tailcat v0.6.0.

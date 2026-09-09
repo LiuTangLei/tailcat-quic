@@ -2,9 +2,11 @@
 
 A **QUIC/HTTP/3-only** fork of [tailscale/tailcat v0.6.0](https://github.com/tailscale/tailcat/tree/v0.6.0). Connect two machines using a connection code, without a Tailscale account, control server, root privileges, or system routing changes.
 
-This fork reuses the native-IP H3 transport from [LiuTangLei/tailscale](https://github.com/LiuTangLei/tailscale). It carries IP packets using real HTTP/3 CONNECT-IP and QUIC DATAGRAM, rather than putting WireGuard ciphertext inside another tunnel. **BBRv3 is selected by the application on both QUIC endpoints.** Changing the operating system's TCP congestion-control setting does not select the QUIC controller.
+This fork reuses the authenticated H3 transport from [LiuTangLei/tailscale](https://github.com/LiuTangLei/tailscale). **TCP proxy connections use reliable HTTP/3 CONNECT streams**, avoiding a second user-space TCP stack inside QUIC. UDP/IP datagrams use HTTP/3 CONNECT-IP and QUIC DATAGRAM on the same authenticated H3 connection. Neither path wraps WireGuard ciphertext. **BBRv3 is selected by the application on both QUIC endpoints.** Changing the operating system's TCP congestion-control setting does not select the QUIC controller.
 
-The executable is still named `tailcat`. Both endpoints must run this H3 fork. Its versioned `tch3…` connection codes are deliberately separate from upstream `tc…` codes. For standard WireGuard tailcat, use the [official project](https://github.com/tailscale/tailcat).
+The v0.6.0-h3.2 performance candidate exceeded the official v0.6.0 WG executable in the recorded two-host throughput comparisons; loaded latency still has spikes. See [the measured comparison and validation boundaries](docs/release-validation-v0.6.0-h3.2.md), rather than treating a peak speed as a universal guarantee.
+
+The executable is still named `tailcat`. Both endpoints should upgrade together to a version advertising the reliable TCP-stream capability. Older H3 peers lacking it receive an explicit incompatibility error, not a WG fallback. Both endpoints must run this H3 fork. Its versioned `tch3…` connection codes are deliberately separate from upstream `tc…` codes. For standard WireGuard tailcat, use the [official project](https://github.com/tailscale/tailcat).
 
 ## Install
 
@@ -40,7 +42,7 @@ On the client:
 tailcat forward 'tch3…' 18080:8080
 ```
 
-Open `http://127.0.0.1:18080` on the client. Forward listeners bind to loopback by default. Multiple mappings can share a single process:
+Open `http://127.0.0.1:18080` on the client. Numeric `serve` and `forward` retain their upstream TCP-only CLI semantics; library UDP APIs are separate. Forward listeners bind to loopback by default. Multiple mappings can share a single process:
 
 ```sh
 tailcat serve 8080,3306
@@ -126,7 +128,7 @@ The client still needs the H3 connection code. Possession of a listed public key
 
 ## Protocol and security
 
-* There is one data plane: native IP over authenticated HTTP/3 CONNECT-IP / QUIC DATAGRAM. No WG/AWG negotiation or fallback is started.
+* There is one H3 data plane: reliable CONNECT streams for TCP proxy connections and CONNECT-IP / QUIC DATAGRAM for datagrams. No WG/AWG negotiation or fallback is started. Each TCP CONNECT is accepted only on an already authenticated QUIC session and is checked against the configured service policy.
 * The connection code selects the H3 protocol version and contains the server identity, discovery information, and a mandatory random connection secret.
 * Client admission requires that secret and respects the optional node allowlist. The H3 handshake additionally binds both node identities to the current TLS session. No trust-on-first-use certificate acceptance or external control-plane identity exchange is required.
 * BBRv3 runs in userspace inside the pinned QUIC library, independently for each sending endpoint. A configured controller is not a promise of higher speed on every path or of production-scale congestion fairness.

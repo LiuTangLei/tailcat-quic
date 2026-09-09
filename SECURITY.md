@@ -18,7 +18,9 @@ Treat `tailcat parse` output as secret: decoding a code does not make its fields
 
 ## Encryption and trust
 
-Application IP packets are transported in authenticated HTTP/3 CONNECT-IP / QUIC DATAGRAM sessions. There is no WireGuard encryption layer inside this tunnel and no WG/AWG data-plane fallback. The node authentication and source-address policy are therefore essential parts of the H3 security boundary, not optional conveniences.
+TCP proxy connections use reliable HTTP/3 CONNECT streams on an already authenticated QUIC session. A TLS connection alone cannot open a proxy stream: the server checks the exact connection's completed node authentication, current peer authorization, and the embedding application's served-port/forward policy. The connection's presented remote address is derived from the authenticated node identity, not from a client-supplied source address. UDP/IP packets continue to use authenticated CONNECT-IP / QUIC DATAGRAM and source-address checks. There is no WireGuard encryption layer and no WG/AWG data-plane fallback.
+
+Long-lived reliable streams remain on their QUIC connection rather than being truncated by the older IP-only backend's periodic full-connection replacement. QUIC packet-key updates and live peer revocation remain active. Packet-key updates are not the same operation as a new authenticated Diffie-Hellman handshake; this fork does not claim WireGuard's exact rekey schedule or identical cryptographic construction.
 
 TLS identities are created locally and integrated with the existing node-authentication mechanism. This is not public-Web PKI authentication and must not be presented as a publicly trusted HTTPS website. Accepting a provisional certificate is not admission: the transport must complete its bound node proof before admitting application traffic. An implementation change that forwards traffic before authentication is a vulnerability.
 
