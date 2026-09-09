@@ -24,6 +24,7 @@ import (
 
 // wireConnInfo is the wire form of [ConnInfo].
 type wireConnInfo struct {
+	Version           int           `cbor:"v" json:"Version"`
 	ServerPublic      NodePublic    `cbor:"p" json:"ServerPublic"`
 	ServerDiscoPublic *DiscoPublic  `cbor:"k,omitempty" json:"ServerDiscoPublic,omitempty"`
 	PresharedKey      *PresharedKey `cbor:"q,omitempty" json:"PresharedKey,omitempty"`
@@ -66,7 +67,7 @@ type wireNode struct {
 // embedded region is for.
 func wireRegionOf(r *tailcfg.DERPRegion) *wireRegion {
 	w := &wireRegion{
-		RegionID:   r.RegionID.Int64(),
+		RegionID:   int64(r.RegionID),
 		RegionCode: r.RegionCode,
 		RegionName: r.RegionName,
 	}
@@ -76,7 +77,7 @@ func wireRegionOf(r *tailcfg.DERPRegion) *wireRegion {
 		}
 		w.Nodes = append(w.Nodes, &wireNode{
 			Name:             n.Name,
-			RegionID:         n.RegionID.Int64(),
+			RegionID:         int64(n.RegionID),
 			HostName:         n.HostName,
 			CertName:         n.CertName,
 			IPv4:             n.IPv4,

@@ -1,69 +1,51 @@
-# Releasing tailcat
+# Releasing Tailcat H3
 
-Releases are cut by pushing a version tag. GitHub Actions
-(`.github/workflows/release.yml`) then runs
-[GoReleaser](https://goreleaser.com/) with the config in
-`.goreleaser.yaml`, which builds the artifacts and creates a draft
-GitHub Release with a changelog generated from the commit log. The
-draft is invisible to watchers until published.
+This repository is the independent QUIC/H3-only fork. Release tags use `v0.6.0-h3.N` for the upstream v0.6 baseline. Do not run the upstream `tag.sh` blindly: publishing this fork also requires the authenticated H3 and QUIC controller dependency gates below.
 
-## Cutting a release
+## Dependency gate
 
-1. Make sure the Test workflow is green on `main`.
-2. Run the release script, which creates an SSH-signed annotated tag
-   after checking that the tag doesn't already exist on origin (a tag
-   that exists only locally is replaced). It requires git's
-   `user.signingkey` to be set to your SSH public key.
+Publish immutable versions of the QUIC and Tailscale H3 dependencies first, after their relevant unit, integration, race, and integrity tests pass. Keep existing upstream/default congestion policies unchanged. Pin published module versions in this repository's `go.mod`; local replacements and build-time source overlays are forbidden in a release.
 
-   ```sh
-   ./tag.sh v0.1.0
-   ```
+For the first H3 release the pins are:
 
-3. Push the tag as the script instructs:
+- `github.com/LiuTangLei/quic-go v0.62.0-tailcat.1`
+- `github.com/LiuTangLei/tailscale v1.102.3-tailcat.1`
 
-   ```sh
-   git push origin v0.1.0
-   ```
+The upstream Go import paths are intentionally retained through module replacements. Build this CLI from a checked-out tag rather than using `go install …@version`, which does not support a main module's dependency replacements.
 
-4. Watch the Release workflow in the Actions tab. When it finishes,
-   a draft release with all artifacts appears on the
-   [Releases page](https://github.com/tailscale/tailcat/releases).
+## Validation gate
 
-5. Edit the draft: replace or top it with hand-written release notes,
-   then publish. Publishing is the step that notifies watchers, so
-   the notification carries the curated notes.
+Run `go mod tidy`, `go mod verify`, `go vet ./...`, the full test suite, and the race suite. Under race instrumentation, serialize heavyweight operating-system/network fixtures with `-p=1 -parallel=1`; the tests themselves still exercise concurrent streams and callbacks. Do not skip functional tests to create a release.
+
+```sh
+go mod tidy
+go mod verify
+go test -count=1 -timeout=15m ./...
+go test -race -p=1 -parallel=1 -count=1 -timeout=20m ./...
+go vet ./...
+go test -run '^$' -fuzz '^FuzzH3ConnectionCode$' -fuzztime=10s -parallel=2 .
+```
+
+Run real application-data integrity tests, not just discovery pings. `scripts/wan_smoke.py` uses temporary loopback fixtures and separate CLI processes; it accepts the test host at runtime so private infrastructure is not committed. Exercise both direct UDP and forced DERP paths. It supports a RAM-backed temporary root on a test machine whose persistent disk is full, but never clears unrelated files or changes production services.
+
+Record exact tested conditions in `docs/release-validation-v0.6.0-h3.1.md` or the report for the next release. Distinguish runtime testing from cross-compilation. Never claim tests prove the absence of all bugs or guarantee network performance.
+
+## Publication gate
+
+Push the branch and check its **Test** workflow. Only tag the intended reviewed commit after the checks pass. The **Release** workflow reruns the test matrix and cannot package until it succeeds. It creates a **draft** release, not a published notification.
+
+Before publishing the draft, verify:
+
+- The tag is rooted in the documented upstream version and all module pins are public.
+- Every expected executable archive and Linux package is attached, together with `checksums.txt`.
+- Downloaded executable archives match their checksums and contain the expected version and dependency build information.
+- Native runtime smoke tests use the packaged binaries, not merely an earlier development binary.
+- Release notes and bundled documentation describe actual test coverage and do not contain connection codes, private server addresses, or local worktree paths.
+
+Publishing the draft is the final maintainer action. Do not move a published tag to repair a problem; publish a new H3 revision instead.
 
 ## Artifacts
 
-Each release contains:
+Release executables: Linux amd64/arm64/armv7, macOS amd64/arm64, Windows amd64/arm64. Archives use tar.gz, except Windows uses zip. Linux DEB/RPM packages are named `tailcat-h3` and install the `tailcat` executable, conflicting with the standard `tailcat` package rather than silently co-installing two different programs under the same name.
 
-* Linux static binaries (tar.gz) for amd64, arm64, and armv7
-* Debian (.deb) and RPM (.rpm) packages for the same architectures
-* Windows binaries (zip) for amd64 and arm64
-* `checksums.txt` with SHA-256 checksums of the above
-
-Each release also pushes container images (amd64 and arm64) to
-[ghcr.io/tailscale/tailcat](https://github.com/tailscale/tailcat/pkgs/container/tailcat), tagged
-both `vX.Y.Z` and `latest`. The image is the static binary in a
-[distroless](https://github.com/GoogleContainerTools/distroless) base
-image; see `Dockerfile.goreleaser`.
-
-The binary version is embedded at build time via `-ldflags -X
-main.version=...`; `tailcat version` prints it. Builds made with
-`go install github.com/tailscale/tailcat/cmd/tailcat@vX.Y.Z` instead
-report the module version from the Go build info.
-
-## Testing locally
-
-To build everything without tagging or publishing, install
-[GoReleaser](https://goreleaser.com/install/) and run:
-
-```sh
-goreleaser release --snapshot --clean
-```
-
-The artifacts land in `dist/` (which is gitignored). In snapshot mode
-the container images are built into the local Docker daemon as
-separate per-platform tags rather than a multi-arch manifest, and
-nothing is pushed. Building them requires a buildx builder with the
-docker-container driver (`docker buildx create --use`).
+The fork does not publish to Tailscale's container registry, Homebrew formula, browser demo, or Nix package. The executable build tags in `.goreleaser.yaml` and `build-tags.txt` are enforced by the existing build-tag synchronization tests.

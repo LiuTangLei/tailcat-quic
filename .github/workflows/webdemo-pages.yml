@@ -24,6 +24,8 @@ concurrency:
 
 jobs:
   build:
+    # The native H3 fork must not deploy the incompatible upstream browser demo.
+    if: github.repository == 'tailscale/tailcat'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

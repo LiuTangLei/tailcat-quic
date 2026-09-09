@@ -1,35 +1,26 @@
 // Copyright (c) Tailscale Inc & contributors
 // SPDX-License-Identifier: BSD-3-Clause
 
-// Package tailcat implements a control-plane-free network pipe built on
-// Tailscale's data plane which provides encryption (WireGuard) and NAT traversal.
-// This is the library behind the "tailcat" CLI command (cmd/tailcat).
+// Package tailcat implements a control-plane-free network pipe over native-IP
+// HTTP/3 CONNECT-IP and QUIC DATAGRAM, with userspace BBRv3 congestion control.
+// This independent H3 fork retains Tailscale's NAT traversal and network stack.
+// It does not create a WireGuard data-plane device.
 //
-// A [Server] listens for incoming clients via a DERP relay. Clients discover
-// the server through a compact [Addr] (a tailcat address) that encodes the
-// server's WireGuard and path-discovery public keys, optional WireGuard
-// pre-shared key, and DERP region. DERP is used only for the initial
-// bootstrap; once both sides learn each other's endpoints, Tailscale's
-// magicsock layer upgrades to a direct peer-to-peer UDP path whenever possible,
-// just like the normal Tailscale data plane. DERP remains available as a
-// fallback relay if a direct path cannot be established.
+// A [Server] is reached using a versioned tch3 connection code containing its
+// node identity, discovery public key, mandatory connection secret, and DERP
+// region. Treat the entire code as a private credential. Bootstrap admission
+// and TLS-bound H3 authentication both require the connection secret.
 //
-// Once connected, the two sides exchange arbitrary TCP streams and UDP
-// datagrams over the WireGuard tunnel with no Tailscale account or coordination
-// server required.
-// Optionally, the server can run an SSH server on port 22, either requiring
-// authorized public keys or relying on the tunnel for client identity.
+// Magicsock discovers direct UDP paths when available. DERP can carry the same
+// H3 data plane when a direct path is unavailable; this is a path choice, not
+// a WG/AWG protocol fallback. TCP streams and UDP datagrams are carried without
+// a Tailscale account or coordination server. Optional SSH services can require
+// authorized SSH public keys in addition to tunnel admission.
 //
-// The name "tailcat" is a nod to the classic "netcat" tool, but with
-// Tailscale's WireGuard encryption + NAT traversal.
-//
-// Using Tailscale's DERP servers is not required; you can run your own DERP
-// server and provide its region information in the tailcat address.
-//
-// This package has no API stability promises: types, functions, and
-// the wire format may all change. See the Stability section of the
-// README (https://github.com/tailscale/tailcat/#readme) for details,
-// including the terms of Tailscale's public DERP relays.
+// Custom DERP servers can be supplied in the connection code. Public relays
+// are best effort. Browser-style framing does not guarantee unobservability.
+// This fork is not an official Tailscale product and has no API stability
+// promise. See https://github.com/LiuTangLei/tailcat for usage and security.
 package tailcat
 
 import (
@@ -61,7 +52,6 @@ import (
 	"unsafe"
 
 	"github.com/fxamacker/cbor/v2"
-	"github.com/tailscale/wireguard-go/device"
 	go4mem "go4.org/mem"
 	"go4.org/netipx"
 	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
@@ -94,6 +84,7 @@ import (
 	"tailscale.com/wgengine/netstack"
 	"tailscale.com/wgengine/router"
 	"tailscale.com/wgengine/wgcfg"
+	"tailscale.com/wgengine/wgtransport"
 )
 
 // Verbose controls whether extra diagnostic logging is emitted during
@@ -148,10 +139,9 @@ type expandForServer struct{}
 // CBOR-encoded [ConnInfo]. A typical Addr looks like "tcomFwWC…".
 type Addr string
 
-// ConnInfo describes how to reach a server: its WireGuard and path-discovery
-// public keys, WireGuard pre-shared key, and which DERP relay region to use. It is serialized into an
-// [Addr] for exchange,
-// via the wire types in wire.go.
+// ConnInfo describes how to reach an H3 server: its node and discovery public
+// keys, mandatory secret connection credential, and DERP relay information.
+// Its serialized [Addr] is private, even though some fields are public keys.
 type ConnInfo struct {
 	ServerPublic NodePublic // a key.NodePublic
 	// ServerDiscoPublic is the server's public key for path discovery.
@@ -160,12 +150,11 @@ type ConnInfo struct {
 	// unguessable part of the server's tailcat address.
 	ServerDiscoPublic DiscoPublic // a key.DiscoPublic
 
-	// PresharedKey is mixed into the WireGuard handshake. It is an independent
-	// random secret, providing post-quantum confidentiality and preventing a
-	// DERP operator that observes the peers' node public keys from joining the
-	// tunnel. When non-zero, treat the entire tailcat address as a secret
-	// because it contains this key. The zero value disables the pre-shared-key
-	// layer for compatibility with old clients.
+	// PresharedKey is the independent random H3 connection secret. It binds
+	// bootstrap admission and the TLS-bound node proof, preventing a relay
+	// observer from joining merely by knowing public node keys. The zero
+	// value is invalid. This is not a WireGuard PSK encryption layer, and its
+	// name does not imply additional post-quantum confidentiality.
 	PresharedKey PresharedKey
 
 	// Region, if non-empty, lists the regions of a DERPMap.
@@ -199,20 +188,17 @@ type DiscoPublic struct {
 	key.DiscoPublic
 }
 
-const presharedKeyLen = device.NoisePresharedKeySize
+const presharedKeyLen = 32
 
-// PresharedKey is an optional 256-bit WireGuard pre-shared key. Tailcat
-// addresses generated by current servers always contain a non-zero key. It is
-// a named form of [device.NoisePresharedKey] so it can define the CBOR and JSON
-// encodings used by tailcat addresses and persisted server keys.
-type PresharedKey device.NoisePresharedKey
+// PresharedKey is the mandatory 256-bit H3 admission secret. The historical
+// name and storage encoding are retained; it is not a WireGuard device type.
+type PresharedKey [presharedKeyLen]byte
 
-// NewPresharedKey returns a new cryptographically random WireGuard pre-shared
-// key.
+// NewPresharedKey returns a cryptographically random H3 connection secret.
 func NewPresharedKey() (ret PresharedKey) {
 	for ret.IsZero() {
 		if _, err := cryptorand.Read(ret[:]); err != nil {
-			panic(fmt.Sprintf("generating WireGuard pre-shared key: %v", err))
+			panic(fmt.Sprintf("generating H3 connection secret: %v", err))
 		}
 	}
 	return ret
@@ -237,7 +223,7 @@ func (p PresharedKey) MarshalBinary() ([]byte, error) {
 // UnmarshalBinary implements encoding.BinaryUnmarshaler for CBOR serialization.
 func (p *PresharedKey) UnmarshalBinary(x []byte) error {
 	if len(x) != presharedKeyLen {
-		return fmt.Errorf("invalid WireGuard pre-shared key length %d, want %d", len(x), presharedKeyLen)
+		return fmt.Errorf("invalid H3 connection secret length %d, want %d", len(x), presharedKeyLen)
 	}
 	copy(p[:], x)
 	return nil
@@ -255,11 +241,11 @@ func (p PresharedKey) MarshalText() ([]byte, error) {
 func (p *PresharedKey) UnmarshalText(x []byte) error {
 	const prefix = "psk:"
 	if len(x) != len(prefix)+hex.EncodedLen(presharedKeyLen) || string(x[:len(prefix)]) != prefix {
-		return fmt.Errorf("invalid WireGuard pre-shared key %q", x)
+		return errors.New("invalid H3 connection secret encoding")
 	}
 	var ret PresharedKey
 	if _, err := hex.Decode(ret[:], x[len(prefix):]); err != nil {
-		return fmt.Errorf("invalid WireGuard pre-shared key: %w", err)
+		return fmt.Errorf("invalid H3 connection secret: %w", err)
 	}
 	*p = ret
 	return nil
@@ -306,7 +292,7 @@ func (a NodePublic) Equal(b NodePublic) bool {
 
 // PrivateKey is a node identity: a private key paired with the connection
 // info needed to reach this node. Despite its historical name, Public contains
-// the secret WireGuard pre-shared key and must be kept private. Its DERP region
+// the secret H3 connection credential and must be kept private. Its DERP region
 // must be populated by the caller before the key is usable.
 type PrivateKey struct {
 	Private key.NodePrivate
@@ -343,6 +329,11 @@ type locoBackend struct {
 	serverDiscoPub key.DiscoPublic // non-zero if we're a client (server's disco key)
 	presharedKey   PresharedKey
 	isServer       bool
+	bootstrapNonce [32]byte      // fresh per client lifetime; binds bootstrap acknowledgments
+	meowSlots      chan struct{} // bounded admission workers
+	admissionMu    sync.Mutex    // serializes admission and retired-peer cleanup
+	clientLeases   sync.Map      // key.NodePublic -> *h3ClientLease; callback-safe
+	nextClientID   tailcfg.NodeID
 
 	// discoPublic returns the node's disco public key, memoized to
 	// avoid redoing the curve25519 derivation for every client that
@@ -392,7 +383,7 @@ func (b *locoBackend) Close() error {
 	return nil
 }
 
-// Server listens for clients over a WireGuard tunnel relayed through DERP.
+// Server listens for clients over authenticated H3, directly or through DERP.
 // Incoming TCP connections and UDP flows are dispatched via the OnTCP/OnUDP
 // callbacks (for traffic addressed to the server itself) and their Forward
 // counterparts (for traffic the server relays to other addresses).
@@ -405,15 +396,14 @@ type Server struct {
 	// If zero, Start generates a new ephemeral key.
 	Key key.NodePrivate
 
-	// PresharedKey is the WireGuard pre-shared key clients must know to
+	// PresharedKey is the H3 connection credential clients must know to
 	// connect. If zero, Start generates a new ephemeral key and includes it in
 	// [Server.TailcatAddr]. A persistent server must restore this value along
 	// with Key so its address remains usable across restarts.
 	PresharedKey PresharedKey
 
-	// DisablePresharedKey disables the pre-shared-key layer and causes Start to
-	// ignore PresharedKey. This is not recommended, but produces shorter
-	// addresses compatible with tailcat clients v0.5.0 and earlier.
+	// DisablePresharedKey is retained to reject incompatible callers clearly.
+	// Setting it causes Start to fail; H3 credentials cannot be disabled.
 	DisablePresharedKey bool
 
 	// Logf is the logger used for debug messages.
@@ -557,7 +547,7 @@ func (s *Server) Start() error {
 	}
 	psk := s.PresharedKey
 	if s.DisablePresharedKey {
-		psk = PresharedKey{}
+		return errors.New("H3 requires a connection secret; --psk=false is not supported")
 	} else if psk.IsZero() {
 		psk = NewPresharedKey()
 	}
@@ -610,25 +600,28 @@ func (s *Server) Start() error {
 
 	lb.isServer = true
 	lb.onDERPRecv = func(regionID tailcfg.DERPRegionID, src key.NodePublic, pkt []byte) bool {
-		if !IsMeowPacket(pkt) {
-			return false
+		if !isH3Meow(pkt) {
+			return IsMeowPacket(pkt) // discard legacy unauthenticated bootstrap
 		}
-		if IsMeowedPacket(pkt) {
-			return true // server ignores meowed
-		}
-		if _, discoPub, ok := ParseMeowPing(pkt); ok {
-			mc := lb.sys.MagicSock.Get()
-			go func() {
-				// Only reply once the client is fully added as a peer:
-				// "meowed" is the ack that tells the client it can
-				// start dialing. Disallowed clients get no reply.
-				if lb.onMeow(src, discoPub) {
-					mc.SendDERPPacketTo(src, regionID, EncodeMeowed())
-				}
-			}()
+		discoPub, nonce, ok := parseH3Meow(pkt, lb.presharedKey, lb.pub, src, false)
+		if !ok {
 			return true
 		}
-		return false
+		// The callback may run under magicsock's lock. Schedule bounded work
+		// only after checking the MAC, and never block the packet reader.
+		select {
+		case lb.meowSlots <- struct{}{}:
+		default:
+			return true
+		}
+		go func() {
+			defer func() { <-lb.meowSlots }()
+			if lb.onMeow(src, discoPub) {
+				ack := encodeH3Meow(lb.presharedKey, lb.pub, src, discoPub, nonce, true)
+				lb.sys.MagicSock.Get().SendDERPPacketTo(src, regionID, ack)
+			}
+		}()
+		return true
 	}
 
 	if err := createEngine(logf, lb); err != nil {
@@ -787,7 +780,7 @@ func (s *Server) buildFilter() *filter.Filter {
 // It must only be called after [Server.Start].
 func (s *Server) Addr() netip.Addr { return s.lb.addr }
 
-// Close shuts down the server, closing the WireGuard engine and DERP connections.
+// Close shuts down the server, closing the H3 engine and DERP connections.
 func (s *Server) Close() error {
 	if s.lb == nil {
 		return nil // never started
@@ -924,6 +917,10 @@ func newLocoBackend(priv key.NodePrivate, psk PresharedKey) *locoBackend {
 		addr:         addr,
 		addrPrefix:   addrPrefix,
 		presharedKey: psk,
+		meowSlots:    make(chan struct{}, 32),
+	}
+	if _, err := cryptorand.Read(lb.bootstrapNonce[:]); err != nil {
+		panic(fmt.Sprintf("generating H3 bootstrap nonce: %v", err))
 	}
 	lb.discoPublic = sync.OnceValue(func() key.DiscoPublic { return discoPrivateForNode(lb.priv).Public() })
 	return lb
@@ -960,7 +957,8 @@ func (lb *locoBackend) tailcatAddr() Addr {
 func (ci *ConnInfo) Addr() Addr {
 	w := &wireConnInfo{
 		ServerPublic: ci.ServerPublic,
-		RegionID:     ci.RegionID.Int64(),
+		RegionID:     int64(ci.RegionID),
+		Version:      h3AddressVersion,
 	}
 	if !ci.ServerDiscoPublic.IsZero() {
 		w.ServerDiscoPublic = &ci.ServerDiscoPublic
@@ -993,7 +991,7 @@ func (ci *ConnInfo) Addr() Addr {
 		log.Printf("tailcat address: %q", x)
 		log.Printf("tailcat address: %x", x)
 	}
-	return "tc" + Addr(base64.RawURLEncoding.EncodeToString(x))
+	return h3AddressPrefix + Addr(base64.RawURLEncoding.EncodeToString(x))
 }
 
 // Resolve returns a self-contained equivalent of a with the DERP
@@ -1025,17 +1023,29 @@ func (a Addr) Resolve(ctx context.Context, opts ...any) (Addr, error) {
 // parseWire decodes an address into its wire form, without restoring the
 // fields that [ConnInfo.Addr] elides.
 func parseWire(addr Addr) (*wireConnInfo, error) {
-	rest, ok := strings.CutPrefix(string(addr), "tc")
+	if len(addr) > 64<<10 {
+		return nil, errors.New("H3 connection code is too long")
+	}
+	rest, ok := strings.CutPrefix(string(addr), h3AddressPrefix)
 	if !ok {
-		return nil, errors.New("tailcat address doesn't start with \"tc\"")
+		return nil, errors.New("incompatible connection code: this H3 fork requires a tch3 code, not an official tc WireGuard code")
 	}
 	x, err := base64.RawURLEncoding.DecodeString(rest)
 	if err != nil {
 		return nil, fmt.Errorf("base64 decode: %w", err)
 	}
 	w := new(wireConnInfo)
-	if err := cbor.Unmarshal(x, w); err != nil {
+	if err := h3CBORDecoder.Unmarshal(x, w); err != nil {
 		return nil, fmt.Errorf("CBOR unmarshal: %v", err)
+	}
+	if w.Version != h3AddressVersion {
+		return nil, fmt.Errorf("unsupported H3 connection-code version %d", w.Version)
+	}
+	if w.ServerPublic.IsZero() || w.ServerDiscoPublic == nil || w.ServerDiscoPublic.IsZero() {
+		return nil, errors.New("H3 connection code requires separate non-zero server and discovery keys")
+	}
+	if w.PresharedKey == nil || w.PresharedKey.IsZero() {
+		return nil, errors.New("H3 connection code requires a non-zero connection secret")
 	}
 	return w, nil
 }
@@ -1339,31 +1349,23 @@ func (ci *ConnInfo) Expand(ctx context.Context, opts ...any) error {
 
 var allIPv6 = netip.MustParsePrefix("::/0")
 
-// peerConfig returns the WireGuard config for the peer with public key k.
-// It is the engine's per-peer
-// WireGuard config source (see [wgengine.Engine.SetPeerConfigFunc]).
-func (b *locoBackend) peerConfig(k key.NodePublic) (_ wgcfg.PeerConfig, ok bool) {
-	withPSK := func(allowedIPs []netip.Prefix) wgcfg.PeerConfig {
-		return wgcfg.PeerConfig{
-			AllowedIPs:   allowedIPs,
-			PresharedKey: device.NoisePresharedKey(b.presharedKey),
-		}
-	}
+// peerConfig is the live authorization and source-address policy for H3 peers.
+// The connection secret is authenticated separately in the H3 TLS-bound proof.
+func (b *locoBackend) peerConfig(k key.NodePublic) (_ []netip.Prefix, ok bool) {
 	if !b.serverPub.IsZero() {
-		// We're the client; the server is our only peer and may send
-		// from any address (it can act as an exit node).
+		// The server may forward remote source addresses for an exit-node client.
 		if k == b.serverPub {
-			return withPSK([]netip.Prefix{pfxOf(tcAddrForKey(k)), allIPv6}), true
+			return []netip.Prefix{pfxOf(tcAddrForKey(k)), allIPv6}, true
 		}
-		return wgcfg.PeerConfig{}, false
+		return nil, false
 	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	n, ok := b.clients[k]
 	if !ok {
-		return wgcfg.PeerConfig{}, false
+		return nil, false
 	}
-	return withPSK(n.AllowedIPs), true
+	return n.AllowedIPs, true
 }
 
 // peerByIP returns the public key of the peer that outbound packets
@@ -1556,10 +1558,31 @@ func (lb *locoBackend) Start() error {
 	mc.SetNetworkUp(true)
 	lb.logf("NetworkMap: %v", logger.AsJSON(nm))
 
-	// Install the live per-peer config sources. WireGuard peers are
-	// created lazily from these as traffic arrives; there is no
-	// peer list in wgcfg.Config anymore.
+	// Install live H3 peer authorization, source-address policy, and routing.
+	// The retained wgcfg structure carries local addresses, not WG peers.
 	e.SetPeerConfigFunc(lb.peerConfig)
+	e.SetPeerSessionStateFunc(lb.onH3SessionState)
+	e.SetPeerPolicyFuncs(func(local, peer key.NodePublic) bool {
+		if local != lb.pub || peer.IsZero() || peer == local {
+			return false
+		}
+		_, ok := lb.peerConfig(peer)
+		return ok
+	}, func(local, peer key.NodePublic, source netip.Addr) bool {
+		if local != lb.pub || peer.IsZero() || peer == local {
+			return false
+		}
+		prefixes, ok := lb.peerConfig(peer)
+		if !ok {
+			return false
+		}
+		for _, prefix := range prefixes {
+			if prefix.Contains(source) {
+				return true
+			}
+		}
+		return false
+	})
 	e.SetPeerByIPPacketFunc(lb.peerByIP)
 	e.SetPeerForIPFunc(lb.peerForIP)
 	e.SetStatusCallback(lb.onEngineStatus)
@@ -1584,11 +1607,11 @@ func (lb *locoBackend) Start() error {
 	return nil
 }
 
-// onMeow handles a MeowPing from the client with node key src and
-// disco key discoPub, adding it as a WireGuard peer. It reports
-// whether the client is allowed and configured, meaning a "meowed"
-// acknowledgment may be sent.
+// onMeow admits an authenticated bootstrap announcement. H3 still requires
+// the TLS-bound node and connection-secret proof before application traffic.
 func (b *locoBackend) onMeow(src key.NodePublic, discoPub key.DiscoPublic) bool {
+	b.admissionMu.Lock()
+	defer b.admissionMu.Unlock()
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	b.logf("got meow from %v", src.String())
@@ -1597,10 +1620,28 @@ func (b *locoBackend) onMeow(src key.NodePublic, discoPub key.DiscoPublic) bool 
 		return false
 	}
 
-	if _, ok := b.clients[src]; ok {
-		return true
+	if n, ok := b.clients[src]; ok {
+		// Discovery keys are deterministic for a node identity. Reject conflicts.
+		return n.DiscoKey == discoPub
 	}
-	id := len(b.clients) + 2 // server is ID 1, clients are IDs 2, 3, ...
+	if len(b.clients) >= h3MaxClients {
+		retired, ok := b.retireH3ClientLocked(time.Now())
+		if !ok {
+			b.logf("H3 active client admission limit reached")
+			return false
+		}
+		// Authorization was removed before closing the retired transport.
+		// Never call the engine while holding the policy mutex: its teardown
+		// can consult our live peer policy. admissionMu prevents re-admission
+		// of this identity until teardown has completed.
+		b.mu.Unlock()
+		b.sys.Engine.Get().ResetDevicePeer(retired)
+		b.mu.Lock()
+	}
+	b.nextClientID = max(b.nextClientID+1, 2)
+	id := b.nextClientID // IDs remain unique after old clients are reclaimed.
+	lease := newH3ClientLease(time.Now())
+	b.clientLeases.Store(src, lease)
 	derpRegion := b.derpRegionID()
 	mak.Set(&b.clients, src, &tailcfg.Node{
 		ID:         tailcfg.NodeID(id),
@@ -1640,9 +1681,8 @@ func (b *locoBackend) onMeow(src key.NodePublic, discoPub key.DiscoPublic) bool 
 	mc.SetNetworkMap(nm.SelfNode, nm.Peers)
 	b.sys.Netstack.Get().UpdateNetstackIPs(nm)
 
-	// No engine reconfig needed: the WireGuard device learns about the
-	// new peer lazily via the config source installed with
-	// SetPeerConfigFunc when the client's handshake arrives.
+	// The H3 device consults the live admission and source-address policy;
+	// a bootstrap acknowledgment does not establish an application session.
 
 	// Tell the new client our UDP endpoints so both sides can attempt
 	// a direct path. Async because advertiseEndpoints takes b.mu.
@@ -1722,6 +1762,13 @@ func createEngine(logf logger.Logf, lb *locoBackend) (err error) {
 	// call-me-maybe messages that advertise our UDP endpoints (see
 	// locoBackend.advertiseEndpoints).
 	conf.ForceDiscoKey = discoPrivateForNode(lb.priv)
+	factory, err := newH3Factory(lb)
+	if err != nil {
+		return err
+	}
+	conf.Transport = wgtransport.Config{Mode: wgtransport.HTTP3IP, Factory: factory}
+	conf.TransportSource = "tailcat-h3"
+	conf.TransportRevision = "h3-v1-bbrv3"
 	netns.SetEnabled(false)
 	e, err := wgengine.NewUserspaceEngine(logf, conf)
 	if err != nil {
@@ -1733,7 +1780,7 @@ func createEngine(logf logger.Logf, lb *locoBackend) (err error) {
 	return nil
 }
 
-// Client connects to a [Server] over a WireGuard tunnel relayed through DERP.
+// Client connects to a [Server] over authenticated H3, directly or via DERP.
 // Populate Server (the only required field, or use the [NewClient]
 // shorthand), then just dial: [Client.Dial], the DialTCP methods, and the
 // DialUDP methods lazily establish the tunnel on first use,
@@ -1800,7 +1847,7 @@ func NewClient(server Addr) *Client {
 	return &Client{Server: server}
 }
 
-// initLocked builds the client's network stack (WireGuard engine and
+// initLocked builds the client's network stack (native-IP H3 engine and
 // netstack) on first use, with defaults for unset config fields. It
 // does no network access; that happens in ensureStarted, its caller.
 // c.startMu must be held.
@@ -1853,14 +1900,17 @@ func (c *Client) initLocked() error {
 		lb.advertiseEndpoints()
 	})
 	lb.onDERPRecv = func(regionID tailcfg.DERPRegionID, src key.NodePublic, pkt []byte) bool {
-		if !IsMeowPacket(pkt) {
-			return false
+		if !isH3Meow(pkt) {
+			return IsMeowPacket(pkt)
 		}
-		if IsMeowedPacket(pkt) {
-			go onMeowed()
+		if src != lb.serverPub {
 			return true
 		}
-		return true // client ignores MeowPing
+		discoPub, nonce, ok := parseH3Meow(pkt, lb.presharedKey, lb.serverPub, lb.pub, true)
+		if ok && discoPub == lb.discoPublic() && nonce == lb.bootstrapNonce {
+			go onMeowed()
+		}
+		return true
 	}
 
 	if err := createEngine(logf, lb); err != nil {
@@ -1919,7 +1969,7 @@ func (c *Client) PublicKey() key.NodePublic {
 	return c.nodeKeyLocked().Public()
 }
 
-// Close shuts down the client, closing the WireGuard engine and DERP connections.
+// Close shuts down the client, closing the H3 engine and DERP connections.
 func (c *Client) Close() error {
 	c.startMu.Lock()
 	defer c.startMu.Unlock()
@@ -1940,7 +1990,7 @@ type PingResult struct {
 // it resolves the server's DERP region if the Addr didn't embed
 // it (possibly fetching the DERP map over the network, bounded by
 // ctx; see [Addr.Resolve] to do that step earlier), connects to
-// the DERP relay, and configures WireGuard. Failed attempts are
+// the DERP relay, and configures H3 peer admission. Failed attempts are
 // retried on the next call.
 func (c *Client) ensureStarted(ctx context.Context) error {
 	c.startMu.Lock()
@@ -2019,7 +2069,7 @@ func (c *Client) ping(ctx context.Context) (PingResult, error) {
 
 	dstNode := c.ci.ServerPublic.NodePublic
 	derpRegion := c.lb.derpRegionID()
-	pkt := EncodeMeowPing(c.lb.pub, mc.DiscoPublicKey())
+	pkt := encodeH3Meow(c.lb.presharedKey, dstNode, c.lb.pub, mc.DiscoPublicKey(), c.lb.bootstrapNonce, false)
 
 	// DERP delivery is best effort: the relay drops packets sent to a
 	// key that isn't connected yet, so the ping (or its ack) is lost
@@ -2414,7 +2464,7 @@ func (c *idlePacketConn) Close() error {
 	return c.ConnPacketConn.Close()
 }
 
-// Status returns the current WireGuard and DERP connection status.
+// Status returns the current H3 session and DERP connection status.
 func (s *Server) Status() *ipnstate.Status {
 	return s.lb.Status()
 }

@@ -20,6 +20,7 @@ import (
 // Do not change or reuse existing entries: the short names are the
 // Addr wire format.
 var wireFieldNames = map[string]string{
+	"v": "Version",
 	"p": "ServerPublic",
 	"k": "ServerDiscoPublic",
 	"q": "PresharedKey",

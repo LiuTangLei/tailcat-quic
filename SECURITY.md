@@ -1,62 +1,45 @@
-# Security
+# Security of the H3 fork
 
-## Reporting a vulnerability
+This document describes the independent `LiuTangLei/tailcat` H3 fork. Do not assume upstream WireGuard tailcat's cryptographic design, compatibility, or support policy applies unchanged.
 
-To report a security issue, contact the Tailscale security team as
-described at https://tailscale.com/.well-known/security.txt.
+## Report a vulnerability
 
-## Threat model
+Use the repository's **Security → Report a vulnerability** facility when it is available. Otherwise, open an issue asking for a private reporting channel without including exploit details, credentials, connection codes, or private infrastructure information. Do not send vulnerabilities specific to this fork to Tailscale as though this were an official product.
 
-Tailscale (the company) treats the security of the Tailscale core very
-seriously, and tailcat is built from those same production components:
-WireGuard, magicsock, DERP, and gVisor's netstack.
+## Credentials and admission
 
-The tailcat wrapper around them, however, is an early experimental
-tool. It has a lot of powerful features, but it was originally
-designed for use with oneself: the same person running both ends. Its
-threat model hasn't historically included malicious adversaries, such
-as tailcat use between two different parties, one of whom might be
-trying to attack you.
+An H3 connection code is a **bearer credential**, not a public address. It contains an independent random connection secret as well as the server identity and discovery information. The entire code must be shared through a trusted private channel. Do not publish it in DNS, source code, screenshots, shell transcripts, or issue reports.
 
-We recognize that people will inevitably and increasingly use tailcat
-between mutually untrusting parties, and we do want to harden it for
-those use cases over time. Until then, be thoughtful about accepting
-tailcat addresses from, or serving powerful things (shells, writable
-directories, exit nodes) to, people you don't trust. Security reports
-that help us get there are very welcome.
+Knowing a server's public node key is not sufficient for admission. Client admission must prove possession of the connection secret and satisfy any configured node-key allowlist. The authenticated H3 exchange also proves the participating node identities and binds them to the current TLS connection. A relay that observes public node keys must not be able to join by merely choosing its own client key.
 
-## Hall of Thanks
+The H3 connection secret is mandatory. The fork must reject an unsupported protocol version, an official `tc…` connection code, and missing or invalid credentials rather than silently opening a less protected transport. Saved identities and their connection metadata are private credentials, including fields with historical names such as `Public` or `PresharedKey`.
 
-Thanks to the people who've reported security issues in tailcat:
+Treat `tailcat parse` output as secret: decoding a code does not make its fields safe to publish. The same applies to process arguments, configuration backups, and verbose logs. There is no promise that local administrators cannot observe credentials used on their machine.
 
-* [Will Frame](https://wpf.nz/) reported two rounds of issues with
-  write-only (`:wo`) file shares (drop boxes), as used by
-  `tailcat recv`:
-  * In 0.4.0, senders could write over existing files, and could test
-    whether a guessed filename existed by how opening it behaved.
-    Fixed in
-    [d796f883e](https://github.com/tailscale/tailcat/commit/d796f883e5ec8b17f6c4196276fad65646d101f5).
-  * That fix left narrower ways to test guessed names: exclusive
-    creation failed on a collision, and directories could be stat'd.
-    Fixed by storing each upload under a server-chosen name and
-    making directory support a separate opt-in
-    (`tailcat recv --accept-dirs`).
-* [Matt Andreko](https://www.mattandreko.com/) reported two issues
-  with how untrusted tailcat addresses are handled. Both are mostly
-  attacking-yourself issues today, but they matter for automation, or
-  any time you get a tailcat address from an untrusted party:
-  * Invalid tailcat addresses were passed unvalidated to ssh/scp
-    child processes, fixed in
-    [aba9d9ba2](https://github.com/tailscale/tailcat/commit/aba9d9ba255380ab58b12abf8dbcb17cf1f5a649).
-  * Mistyped tailcat addresses leaked to DNS as hostname lookups,
-    fixed in
-    [5cb1ec356](https://github.com/tailscale/tailcat/commit/5cb1ec3566617f5667764456fd1f2ee7cb46a366).
-* [Dinnerb0ne](https://github.com/Dinnerb0ne) reported a panic
-  reachable via a meow packet with a zero disco key. A crash (denial
-  of service) only, but one an anonymous stranger could trigger via
-  DERP. Fixed in
-  [79da910c4](https://github.com/tailscale/tailcat/commit/79da910c40a65125c318f41f22a8ac7f5c5c5efd).
-* [Heyang Zhou](https://x.com/heyang_zhou) reported that reusing the
-  node key as the disco key exposed the unlisted node public key on
-  direct UDP paths, fixed in
-  [cb1e0d753](https://github.com/tailscale/tailcat/commit/cb1e0d753e9ace2ebc5bff147ccf1eee6ccdd463).
+## Encryption and trust
+
+Application IP packets are transported in authenticated HTTP/3 CONNECT-IP / QUIC DATAGRAM sessions. There is no WireGuard encryption layer inside this tunnel and no WG/AWG data-plane fallback. The node authentication and source-address policy are therefore essential parts of the H3 security boundary, not optional conveniences.
+
+TLS identities are created locally and integrated with the existing node-authentication mechanism. This is not public-Web PKI authentication and must not be presented as a publicly trusted HTTPS website. Accepting a provisional certificate is not admission: the transport must complete its bound node proof before admitting application traffic. An implementation change that forwards traffic before authentication is a vulnerability.
+
+Unlike upstream's use of a PSK inside the WireGuard handshake, this fork's connection secret is an admission credential. Do not infer additional post-quantum confidentiality properties merely because that field retains the name `PresharedKey`. Cryptographic properties depend on the negotiated TLS handshake and the actual implementation.
+
+## Scope of the protection
+
+The transport protects application content in transit; it does not hide every characteristic of the connection. Public/private addresses, timing, packet sizes, selected relays, and discovery exchanges may be observable. Real HTTP/3 framing and a browser-style ClientHello do not guarantee indistinguishability from a browser or immunity to active probing, traffic analysis, or blocking.
+
+Direct UDP and DERP relaying are different network paths for the H3 tunnel. A DERP path has its own visible outer transport. Public relays are best-effort services and can be unavailable or rate limited. A discovery ping is not proof that an authenticated application-data tunnel has succeeded.
+
+BBRv3 is a userspace congestion controller, not a security mechanism and not a guarantee of throughput, low latency, or fairness on all networks. Unit tests and a limited WAN test matrix do not replace production-scale congestion-control evaluation.
+
+## Exposed services
+
+Only expose the ports and resources the client needs. `serve all`, `serve exit-node`, writable file service modes, and shell services provide broad access to the server or its network. Keep local forward and SOCKS listeners on loopback unless another machine intentionally needs access to them.
+
+`no-auth-ssh` intentionally does not require a separate SSH credential. Anyone holding an admitted identity and the connection code may receive a shell as the account running tailcat. Prefer the authenticated `ssh` service with an explicit `authorized_keys` source, and use a node allowlist where appropriate. Running as root usually is unnecessary.
+
+Rotate compromised server keys and connection secrets and restart the affected service. Revoking a code does not erase data already obtained by a previously authorized client. Do not reuse upstream key files by assuming that their historical options mean the same thing in this fork.
+
+## Validation and limits
+
+Release validation records the exact tested source and dependencies, tests run, supported build targets, and any limitations. Passing tests is not a guarantee that the implementation is defect-free. Browser/WASM clients from the upstream project are not compatible with this native H3 release.

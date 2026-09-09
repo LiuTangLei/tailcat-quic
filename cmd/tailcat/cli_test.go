@@ -20,7 +20,7 @@ import (
 )
 
 func TestClassifyTailcatAddrArg(t *testing.T) {
-	const addr = "tcomFwWCAAAQIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH2FpCg"
+	const addr = "tch3pWF2AWFwWCAAAQIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH2FrWCAHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGFxWCAJAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGFpCg"
 	for _, tt := range []struct {
 		name, arg     string
 		wantAddr      string
@@ -411,6 +411,16 @@ func TestGenkeyPSK(t *testing.T) {
 			cmd := exec.Command(bin, args...)
 			cmd.Env = append(os.Environ(), cacheEnv(t)...)
 			out, err := cmd.Output()
+			if !tt.wantPSK {
+				var exit *exec.ExitError
+				if !errors.As(err, &exit) || !strings.Contains(string(exit.Stderr), "H3 requires a connection secret") {
+					t.Fatalf("genkey --psk=false = %v; want explicit H3 rejection", err)
+				}
+				if _, err := os.Stat(keyFile); !os.IsNotExist(err) {
+					t.Fatal("rejected genkey wrote a credential file")
+				}
+				return
+			}
 			if err != nil {
 				t.Fatalf("genkey: %v", err)
 			}

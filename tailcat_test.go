@@ -23,7 +23,6 @@ import (
 
 	"github.com/fxamacker/cbor/v2"
 	"github.com/google/go-cmp/cmp"
-	"github.com/tailscale/wireguard-go/device"
 	"go4.org/mem"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
@@ -308,8 +307,12 @@ func TestTailcat(t *testing.T) {
 	}
 	bad := &Client{Server: badInfo.Addr(), Logf: mkLogger(t, "wrong-psk-client")}
 	s.AddAllowedClient(bad.PublicKey())
-	PingForTest(t, s, bad) // the pre-WireGuard discovery handshake still works
 	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	if _, err := bad.Ping(ctx); !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("H3 discovery admitted an incorrect connection secret: %v", err)
+	}
+	cancel()
+	ctx, cancel = context.WithTimeout(context.Background(), 500*time.Millisecond)
 	if conn, err := bad.DialTCPPort(ctx, 80); err == nil {
 		conn.Close()
 		t.Fatal("client with wrong pre-shared key established a tunnel")
@@ -650,7 +653,9 @@ func TestUDPForwardIdleTimeout(t *testing.T) {
 	s := &Server{
 		Logf:           mkLogger(t, "server"),
 		Region:         reg,
-		UDPIdleTimeout: 50 * time.Millisecond,
+		// Real H3 traffic needs scheduling headroom under the race detector.
+		// Still require idle cleanup within the five-second failure deadline.
+		UDPIdleTimeout: 500 * time.Millisecond,
 	}
 	t.Cleanup(func() { s.Close() })
 	s.OnUDPForward = func(dst netip.AddrPort) func(ConnPacketConn) {
@@ -964,7 +969,7 @@ func TestAddr(t *testing.T) {
 			ci: ConnInfo{
 				ServerPublic: akey([32]byte{1: 1, 2: 2, 31: 31}),
 			},
-			want: "tcoWFwWCAAAQIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAHw",
+			want: "tch3pGF2AWFwWCAAAQIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH2FrWCAHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGFxWCAJAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
 		},
 		{
 			name: "key_with_full_custom_region",
@@ -1064,13 +1069,20 @@ func TestAddr(t *testing.T) {
 				ServerPublic: akey([32]byte{1: 1, 2: 2, 31: 31}),
 				RegionID:     10,
 			},
-			want: "tcomFwWCAAAQIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH2FpCg",
+			want: "tch3pWF2AWFwWCAAAQIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAH2FrWCAHAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGFxWCAJAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAGFpCg",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			discoBytes := [32]byte{7}
+			tt.ci.ServerDiscoPublic = DiscoPublic{key.DiscoPublicFromRaw32(mem.B(discoBytes[:]))}
+			tt.ci.PresharedKey = PresharedKey{9}
+			if tt.back != nil {
+				tt.back.ServerDiscoPublic = tt.ci.ServerDiscoPublic
+				tt.back.PresharedKey = tt.ci.PresharedKey
+			}
 			got := tt.ci.Addr()
-			t.Logf("length: %v (%v)", len(got), got)
+			t.Logf("connection-code length: %v", len(got))
 			if tt.want != "" && got != tt.want {
 				t.Fatalf("ConnInfo.Addr marshal wrong.\n got: %s\nwant: %s\n", got, tt.want)
 			}
@@ -1096,6 +1108,7 @@ func TestAddrSeparateDiscoKey(t *testing.T) {
 	ci := ConnInfo{
 		ServerPublic:      NodePublic{priv.Public()},
 		ServerDiscoPublic: discoPub,
+		PresharedKey:      NewPresharedKey(),
 		RegionID:          10,
 	}
 	got, err := ParseAddr(ci.Addr())
@@ -1169,12 +1182,12 @@ func TestClientRejectsLegacyAddr(t *testing.T) {
 	}).Addr()
 	c := NewClient(legacy)
 	_, err := c.Ping(context.Background())
-	if err == nil || !strings.Contains(err.Error(), "legacy tailcat address") {
+	if err == nil || !strings.Contains(err.Error(), "separate non-zero server and discovery keys") {
 		t.Fatalf("Ping error = %v; want legacy address rejection", err)
 	}
 }
 
-func TestClientAcceptsAddrWithoutPresharedKey(t *testing.T) {
+func TestClientRejectsAddrWithoutPresharedKey(t *testing.T) {
 	priv := key.NewNode()
 	addr := (&ConnInfo{
 		ServerPublic:      NodePublic{priv.Public()},
@@ -1185,12 +1198,11 @@ func TestClientAcceptsAddrWithoutPresharedKey(t *testing.T) {
 	c.startMu.Lock()
 	err := c.initLocked()
 	c.startMu.Unlock()
-	if err != nil {
-		t.Fatalf("initLocked: %v", err)
+	if err == nil || !strings.Contains(err.Error(), "connection secret") {
+		t.Fatalf("initLocked without H3 secret = %v; want explicit rejection", err)
 	}
-	t.Cleanup(func() { c.Close() })
-	if !c.lb.presharedKey.IsZero() {
-		t.Fatal("client configured a PSK for an address without one")
+	if c.lb != nil {
+		t.Fatal("an invalid connection code must not start any networking backend")
 	}
 }
 
@@ -1270,16 +1282,15 @@ func TestParseAddrMalformedPresharedKey(t *testing.T) {
 	}
 }
 
-func TestPeerConfigIncludesPresharedKey(t *testing.T) {
+func TestH3PeerConfigSourcePolicy(t *testing.T) {
 	server := key.NewNode().Public()
-	psk := NewPresharedKey()
-	b := &locoBackend{serverPub: server, presharedKey: psk}
-	conf, ok := b.peerConfig(server)
-	if !ok {
-		t.Fatal("peerConfig did not find server peer")
+	b := &locoBackend{serverPub: server, presharedKey: NewPresharedKey()}
+	prefixes, ok := b.peerConfig(server)
+	if !ok || len(prefixes) != 2 || prefixes[0] != pfxOf(tcAddrForKey(server)) || prefixes[1] != allIPv6 {
+		t.Fatalf("H3 server source policy = %v, %v", prefixes, ok)
 	}
-	if conf.PresharedKey != device.NoisePresharedKey(psk) {
-		t.Fatalf("peerConfig pre-shared key = %x, want %x", conf.PresharedKey, psk)
+	if _, ok := b.peerConfig(key.NewNode().Public()); ok {
+		t.Fatal("client admitted an unknown node")
 	}
 }
 
@@ -1315,11 +1326,15 @@ func TestFetchDERPMapMemoryCache(t *testing.T) {
 func TestParseAddrNullInArrays(t *testing.T) {
 	addr := func(t *testing.T, m map[string]any) Addr {
 		t.Helper()
+		m["v"] = h3AddressVersion
+		m["k"] = key.NewDisco().Public().AppendTo(nil)
+		psk := NewPresharedKey()
+		m["q"] = psk[:]
 		b, err := cbor.Marshal(m)
 		if err != nil {
 			t.Fatal(err)
 		}
-		return Addr("tc" + base64.RawURLEncoding.EncodeToString(b))
+		return Addr(h3AddressPrefix + base64.RawURLEncoding.EncodeToString(b))
 	}
 	pub := key.NewNode().Public().AppendTo(nil)
 
@@ -1351,14 +1366,18 @@ func TestParseAddrNullInArrays(t *testing.T) {
 // "tailcat parse" is a diagnostic for looking at a broken address, so it shows the
 // nulls instead of rejecting them.
 func TestParseAddrRawKeepsNulls(t *testing.T) {
+	psk := NewPresharedKey()
 	b, err := cbor.Marshal(map[string]any{
+		"v": h3AddressVersion,
 		"p": key.NewNode().Public().AppendTo(nil),
+		"k": key.NewDisco().Public().AppendTo(nil),
+		"q": psk[:],
 		"r": []any{nil},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	addr := Addr("tc" + base64.RawURLEncoding.EncodeToString(b))
+	addr := Addr(h3AddressPrefix + base64.RawURLEncoding.EncodeToString(b))
 	got, err := ParseAddrRaw(addr)
 	if err != nil {
 		t.Fatalf("ParseAddrRaw: %v", err)

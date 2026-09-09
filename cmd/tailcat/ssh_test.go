@@ -23,9 +23,9 @@ func TestSSHRejectsInvalidAddr(t *testing.T) {
 		addr    string
 		wantErr string
 	}{
-		{"missing prefix", "not-an-address", `doesn't start with "tc"`},
-		{"invalid base64", "tc%", "base64 decode"},
-		{"invalid CBOR", "tc" + base64.RawURLEncoding.EncodeToString([]byte("not CBOR")), "CBOR unmarshal"},
+		{"missing prefix", "not-an-address", "incompatible connection code"},
+		{"invalid base64", "tch3%", "base64 decode"},
+		{"invalid CBOR", "tch3" + base64.RawURLEncoding.EncodeToString([]byte("not CBOR")), "CBOR unmarshal"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			err := clientSSHMode("22", []string{tt.addr})

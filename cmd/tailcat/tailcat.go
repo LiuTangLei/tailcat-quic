@@ -102,7 +102,7 @@ func newRootCommand() *ff.Command {
 	flagFullAddress = serveFS.BoolLong("full-address", "print a longer tailcat address with embedded DERP server info instead of a reference to a DERP map region ID. This lets clients connect more quickly, without a DERP map fetch.")
 	flagFiles = serveFS.StringLong("files", "", "directory to serve to SFTP clients (scp, sftp) with the 'files' service, with an optional :ro (read-only, the default), :rw (read-write), :wo (flat write-only drop box), or :wo+ (recursive write-only drop box) suffix. If empty, the current directory is served read-only. Giving --files implies the 'files' service.")
 	flagSSHAuthorizedKeys = serveFS.StringLong("ssh-authorized-keys", "", "comma-separated SSH public key sources for the 'ssh' service: authorized_keys file paths, literal OpenSSH public key lines, or names like 'alice@github' (fetched from https://github.com/alice.keys). All sources are loaded and validated at startup.")
-	flagPSK = serveFS.BoolLongDefault("psk", true, "include a WireGuard pre-shared key in the tailcat address (recommended). Set false only for shorter addresses and compatibility with tailcat clients v0.5.0 and earlier; this weakens security.")
+	flagPSK = serveFS.BoolLongDefault("psk", true, "include the mandatory H3 connection secret (always required; false is rejected)")
 
 	recvFS := ff.NewFlagSet("recv").SetParent(serveFS)
 	flagRecvAcceptDirs := recvFS.BoolLong("accept-dirs", "accept directory trees (tailcat cp -r), keeping requested file names when available. The trade-off: senders can then make and stat directories and learn whether some names already exist in the drop box. The default flat mode reveals nothing about existing files, but accepts only single files, each saved under a server-chosen unique name.")
@@ -127,12 +127,12 @@ func newRootCommand() *ff.Command {
 	genkeyRegion = genkeyFS.StringLong("region", "auto", "region ID, code, or substring to use. Or a hostname(s) comma-separated to use a custom DERP server(s). If 'auto', one is picked based on latency at each server startup. If 'list', list all regions.")
 	genkeyFixedRegion = genkeyFS.BoolLong("fixed-region", "discover the nearest DERP region once, now, and bake it into the key and tailcat address, so future server startups (and clients) use it without re-probing")
 	genkeyEmbedDERPMap = genkeyFS.BoolLong("embed-derp-map", "embed the DERP map nodes in the tailcat address. Needs a region chosen now, so it implies --fixed-region unless --region names one")
-	genkeyPSK = genkeyFS.BoolLongDefault("psk", true, "include a WireGuard pre-shared key in the generated server key and tailcat address (recommended). Set false only for shorter addresses and compatibility with tailcat clients v0.5.0 and earlier; this weakens security.")
+	genkeyPSK = genkeyFS.BoolLongDefault("psk", true, "include the mandatory H3 connection secret in the generated server key (false is rejected)")
 
 	return &ff.Command{
 		Name:      "tailcat",
 		Usage:     "tailcat [flags] [<subcommand> [flags]] [args...]",
-		ShortHelp: "securely pipe or serve network connections over Tailscale's data plane (WireGuard®, NAT traversal), without Tailscale's control plane (central server, accounts)",
+		ShortHelp: "securely pipe or serve network connections over QUIC/HTTP3 with BBRv3 and NAT traversal, without accounts or a control server",
 		LongHelp:  rootLongHelp,
 		Flags:     rootFS,
 		Subcommands: []*ff.Command{
@@ -703,6 +703,9 @@ func classifyTailcatAddrArg(arg string) (addr tailcat.Addr, dnsName string, err 
 
 	name := strings.TrimSuffix(arg, ".")
 	for label := range strings.SplitSeq(name, ".") {
+		if strings.HasPrefix(label, "tch3") && len(label) > 20 {
+			return "", "", errors.New("argument resembles an H3 connection credential; refusing DNS lookup")
+		}
 		if _, err := tailcat.ParseAddr(tailcat.Addr(label)); err == nil {
 			return "", "", errors.New("argument contains a valid tailcat address as a DNS label; refusing DNS lookup")
 		}
@@ -855,7 +858,7 @@ func clientPingMode(logf logger.Logf, untilDirect bool, timeout time.Duration, a
 		direct := res.Endpoint != ""
 		via := res.Endpoint
 		if !direct {
-			via = fmt.Sprintf("DERP(%v)", cmp.Or(res.DERPRegionCode, res.DERPRegionID.String()))
+			via = fmt.Sprintf("DERP(%v)", cmp.Or(res.DERPRegionCode, fmt.Sprint(res.DERPRegionID)))
 		}
 		fmt.Printf("pong in %v via %v\n", latency, via)
 		if direct || !untilDirect {
@@ -1219,11 +1222,10 @@ func server(logf logger.Logf, serveSpec string) {
 
 	var priv key.NodePrivate
 	var ci *tailcat.ConnInfo
-	pskFlag, ok := serveFS.GetFlag("psk")
-	if !ok {
-		panic("serve flag set has no psk flag")
-	}
 	usePSK := *flagPSK
+	if !usePSK {
+		log.Fatal("H3 requires a connection secret; --psk=false is not supported")
+	}
 
 	if *flagKey == "" {
 		if _, err := os.Stat(keyPath("default")); err == nil {
@@ -1251,17 +1253,9 @@ func server(logf logger.Logf, serveSpec string) {
 		}
 		priv = conf.Private
 		ci = &conf.Public
-		if ci.PresharedKey.IsZero() && !pskFlag.IsSet() {
-			// Saved keys remember whether they use a PSK, so a key made with
-			// genkey --psk=false needs no corresponding serve flag.
-			usePSK = false
+		if ci.PresharedKey.IsZero() {
+			log.Fatalf("key file %v has no H3 connection secret; generate a new H3 key", path)
 		}
-		if usePSK && ci.PresharedKey.IsZero() {
-			log.Fatalf("key file %v has no WireGuard pre-shared key", path)
-		}
-	}
-	if !usePSK {
-		ci.PresharedKey = tailcat.PresharedKey{}
 	}
 	psk := ci.PresharedKey
 	if reg == nil {
@@ -1402,13 +1396,6 @@ func server(logf logger.Logf, serveSpec string) {
 
 	if err := s.Start(); err != nil {
 		log.Fatalf("Server.Start: %v", err)
-	}
-	if psk.IsZero() {
-		if *flagKey == "new" {
-			fmt.Fprintln(os.Stderr, "# ⚠️ WARNING: serving without a WireGuard PSK")
-		} else {
-			fmt.Fprintf(os.Stderr, "# ⚠️ WARNING: saved key %q is not using a WireGuard PSK\n", *flagKey)
-		}
 	}
 	if devDERP != nil {
 		// Wait until we're connected to our own dev DERP before
@@ -1741,10 +1728,10 @@ func genKey(args []string) error {
 		}
 	}
 
-	priv := tailcat.NewPrivateKey()
 	if !*psk {
-		priv.Public.PresharedKey = tailcat.PresharedKey{}
+		return usagef("H3 requires a connection secret; genkey --psk=false is not supported")
 	}
+	priv := tailcat.NewPrivateKey()
 
 	if *client {
 		privj, err := json.MarshalIndent(priv, "", "\t")

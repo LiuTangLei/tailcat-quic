@@ -1,5 +1,20 @@
 # tailcat changelog
 
+## v0.6.0-h3.1 (2026-09-09)
+
+First independent H3-only release, based on official tailcat v0.6.0.
+
+- Native-IP HTTP/3 CONNECT-IP and QUIC DATAGRAM replace the WireGuard data plane; no WG/AWG protocol fallback is started.
+- Both QUIC endpoints explicitly select the new independent userspace BBRv3 controller. Published transport dependencies are fixed in go.mod; existing Tailscale and older BBR defaults remain unchanged.
+- Versioned `tch3…` connection codes contain a mandatory secret credential. Bootstrap admission and the TLS-bound node proof both authenticate this secret; legacy official codes and disabled credentials fail closed.
+- Reuse tailcat's direct-UDP discovery, DERP relay paths, TCP/UDP forwards, SOCKS, files/SFTP, SSH, saved identities, and node allowlists.
+- Bound admission workers and retained identities, and reclaim disconnected identity history without evicting established sessions.
+- Add Linux, macOS, and Windows executable packages, checksums, private-infrastructure-free validation notes, and publication gates that test before creating a draft release.
+
+Both peers need this H3 fork. Standard WireGuard users should use official tailcat. See [the validation report](docs/release-validation-v0.6.0-h3.1.md) and [security notes](SECURITY.md) for test coverage and limitations.
+
+The entries below describe the inherited upstream project before this fork.
+
 ## v0.6.0 (2026-09-04)
 
 - Application-layer UDP support: servers can serve and forward UDP

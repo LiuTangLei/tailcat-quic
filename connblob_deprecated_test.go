@@ -13,8 +13,10 @@ func TestDeprecatedConnBlobAPI(t *testing.T) {
 	var _ func(*Server) ConnBlob = (*Server).ConnBlob
 
 	ci := &ConnInfo{
-		ServerPublic: NodePublic{key.NewNode().Public()},
-		RegionID:     1,
+		ServerPublic:      NodePublic{key.NewNode().Public()},
+		ServerDiscoPublic: DiscoPublic{key.NewDisco().Public()},
+		PresharedKey:      NewPresharedKey(),
+		RegionID:          1,
 	}
 	var addr ConnBlob = ci.ConnBlob()
 
