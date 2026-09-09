@@ -205,6 +205,7 @@ func newRootCommand() *ff.Command {
 			cpCommand(rootFS),
 			lsCommand(rootFS),
 			forwardCommand(rootFS),
+			browseCommand(rootFS),
 			{
 				Name:      "parse",
 				Usage:     "tailcat parse <tc-addr>",

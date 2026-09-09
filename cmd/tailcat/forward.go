@@ -24,6 +24,7 @@ import (
 func forwardCommand(parent *ff.FlagSet) *ff.Command {
 	fs := ff.NewFlagSet("forward").SetParent(parent)
 	bind := fs.StringLong("bind", "127.0.0.1", "listen address; used as the local address when a mapping only specifies a port")
+	openBrowser := fs.BoolLong("open-browser", "open a web browser to the local listener once it's listening; requires exactly one port mapping")
 	return &ff.Command{
 		Name:      "forward",
 		Usage:     "tailcat forward [flags] <tc-addr> <[local:]remote-port|local-port:remote-ip:remote-port> [<...> ...]",
@@ -42,7 +43,14 @@ server to be running as an exit node. For example:
 	tailcat forward <tc-addr> 13306:192.168.1.10:3306`,
 		Flags: fs,
 		Exec: func(ctx context.Context, args []string) error {
-			return runForward(ctx, getLogf(), *bind, args)
+			var onListen func(net.Listener)
+			if *openBrowser {
+				if len(args) > 2 {
+					return usagef("--open-browser requires exactly one port mapping")
+				}
+				onListen = openBrowserToListener
+			}
+			return runForward(ctx, getLogf(), *bind, args, onListen)
 		},
 	}
 }
@@ -60,7 +68,11 @@ func (s forwardSpec) remoteTarget() string {
 	return net.JoinHostPort("localhost", strconv.Itoa(int(s.port)))
 }
 
-func runForward(ctx context.Context, logf logger.Logf, bind string, args []string) error {
+// runForward listens on the local addresses named by the mappings in
+// args and forwards accepted connections to the tailcat server. If
+// onListen is non-nil, it is called once per listener after it starts
+// listening.
+func runForward(ctx context.Context, logf logger.Logf, bind string, args []string, onListen func(net.Listener)) error {
 	if len(args) < 2 {
 		return usagef("forward takes a <tc-addr> and at least one port mapping")
 	}
@@ -101,6 +113,9 @@ func runForward(ctx context.Context, logf logger.Logf, bind string, args []strin
 			return fmt.Errorf("listen on %s: %w", mapping.listenAddr, err)
 		}
 		listeners = append(listeners, ln)
+		if onListen != nil {
+			onListen(ln)
+		}
 		listenersWG.Add(1)
 		go forwardListener(ctx, logf, cl, ln, mapping, &listenersWG, &connectionsWG, &active)
 	}

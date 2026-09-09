@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- `tailcat forward` takes an `--open-browser` flag that opens a web
+  browser to the forwarded local port; `tailcat browse <tc-addr>` is
+  an alias for `tailcat forward --open-browser <tc-addr> 0:80`.
 - `exec` service: `tailcat serve exec -- <command>` runs the command
   for each incoming connection with the connection as its stdin and
   stdout, like inetd. With the `ssh` or `no-auth-ssh` service, the

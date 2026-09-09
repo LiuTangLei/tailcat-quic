@@ -204,6 +204,19 @@ $ tailcat forward --bind=0.0.0.0 tcXXXXXXXXX 18080:8080
 
 Press Ctrl-C to stop forwarding.
 
+### Open a browser to a tailcat server
+
+To view a web server behind a tailcat server, run `browse`:
+
+```sh
+$ tailcat serve 80
+# 🐈 Server listening with new address: tcXXXXXXXXX
+
+$ tailcat browse tcXXXXXXXXX
+```
+
+This is an alias for `tailcat forward --open-browser <tc-addr> 0:80`: it opens `http://127.0.0.1:<port>/` in a web browser once the local listener is ready, then blocks, forwarding connections, until interrupted. The `--open-browser` flag works with any single `forward` port mapping.
+
 ### Public-key-authenticated SSH server
 
 Run an SSH server that accepts keys from local `authorized_keys` files,

@@ -13,6 +13,7 @@ require (
 	github.com/pkg/sftp v1.13.6
 	github.com/tailscale/gliderssh v0.3.4-0.20260716005906-1a0f895faf28
 	github.com/tailscale/wireguard-go v0.0.0-20260904023712-e855235c55a2
+	github.com/toqueteos/webbrowser v1.2.1
 	github.com/u-root/u-root v0.14.0
 	go4.org/mem v0.0.0-20240501181205-ae6ca9944745
 	go4.org/netipx v0.0.0-20260823151212-3075585bcbeb
