@@ -422,7 +422,11 @@ func TestUDP(t *testing.T) {
 			t.Fatalf("DialUDPPort: %v", err)
 		}
 		defer pc.Close()
-		if err := pc.SetDeadline(time.Now().Add(5 * time.Second)); err != nil {
+		// Discovery/bootstrap is not an authenticated H3 session. The first
+		// datagram also drives the TLS/node proof, so give that cold-start
+		// phase the same 30-second allowance as the discovery helper. Keep
+		// the original five-second data deadline once authentication is done.
+		if err := pc.SetDeadline(time.Now().Add(30 * time.Second)); err != nil {
 			t.Fatal(err)
 		}
 		// MaxUDPPayload is the largest datagram that fits Tailcat's 1280-byte
@@ -438,6 +442,9 @@ func TestUDP(t *testing.T) {
 			}
 			if !bytes.Equal(got[:n], payload) {
 				t.Fatalf("UDP echo = %d bytes; want %d-byte datagram", n, len(payload))
+			}
+			if err := pc.SetDeadline(time.Now().Add(5 * time.Second)); err != nil {
+				t.Fatal(err)
 			}
 		}
 		gotFlow := <-flows
