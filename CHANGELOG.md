@@ -1,6 +1,21 @@
 # tailcat changelog
 
-## v0.6.0-h3.2 (2026-09-10)
+## v0.6.0-h3.3 (2026-09-10)
+
+First public release of the independent QUIC/HTTP/3-only fork, based on official tailcat v0.6.0. Both endpoints must use this H3 fork.
+
+- Retain reliable per-connection H3 TCP streams, CONNECT-IP DATAGRAM for UDP/IP, and userspace BBRv3 on both endpoints. No AWG/WG fallback or additional transport configuration.
+- Integrate the validated shared HTTP Datagram single-copy path, passive batching of already-ready packets, and reusable owned TCP write buffers. Do not include the rejected active packet-formation optimization or the unvalidated read-buffer-pool branch.
+- Fix a reproduced shutdown deadlock when magicsock's DERP receive queue is already full. Preserve close notification while the underlying path is usable.
+- Bound CLI test subprocesses and distinguish per-exchange progress from cumulative scheduling time in the small-round-trip regression.
+- Pin public transport dependencies to `tailscale v1.102.3-tailcat.3` and `quic-go v0.62.0-tailcat.3`; builds require no local worktrees.
+- Verify all release checksums and run CLI end-to-end tests against the actual packaged native executable on Linux, macOS and Windows before publication.
+
+Performance is directional: the shared two-round experiment improved forward single-stream throughput by about 24% and reduced server peak RSS, but reverse single-stream throughput decreased about 15%. This is not a promise of universal improvement or general-purpose VPN parity. See [release validation](docs/release-validation-v0.6.0-h3.3.md).
+
+The h3.1 and h3.2 tags below were development candidates whose release workflows did not complete; no public release was published for them.
+
+## v0.6.0-h3.2 (unpublished candidate, 2026-09-10)
 
 Performance release based on official tailcat v0.6.0; both endpoints should upgrade together.
 
@@ -15,9 +30,9 @@ Performance release based on official tailcat v0.6.0; both endpoints should upgr
 
 See [the v0.6.0-h3.2 validation report](docs/release-validation-v0.6.0-h3.2.md) for exact measurements, methodology and limitations.
 
-## v0.6.0-h3.1 (2026-09-09)
+## v0.6.0-h3.1 (unpublished candidate, 2026-09-09)
 
-First independent H3-only release, based on official tailcat v0.6.0.
+Initial independent H3-only candidate, based on official tailcat v0.6.0.
 
 - Native-IP HTTP/3 CONNECT-IP and QUIC DATAGRAM replace the WireGuard data plane; no WG/AWG protocol fallback is started.
 - Both QUIC endpoints explicitly select the new independent userspace BBRv3 controller. Published transport dependencies are fixed in go.mod; existing Tailscale and older BBR defaults remain unchanged.
