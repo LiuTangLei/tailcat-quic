@@ -476,6 +476,7 @@ def client(args):
 
 def drive(args):
     dirs, procs = {}, []
+    cleanup_errors = []
     hosts = [args.server, args.client]
     script = Path(__file__).resolve()
     binary = Path(args.binary).resolve()
@@ -548,10 +549,23 @@ def drive(args):
             stop(p)
         for host, path in dirs.items():
             # Match only this run's script/binary, not another tailcat process.
-            cleanup = ("pids=$(pgrep -f '^"+re.escape(path)+"/tailcat( |$)' || true); "
+            cleanup = ("pids=$(pgrep -f '^"+re.escape(path+'/'+binary.name)+"( |$)' || true); "
                        "if [ -n \"$pids\" ]; then kill -TERM $pids 2>/dev/null || true; fi; "
                        "rm -rf -- " + shlex.quote(path))
-            subprocess.run(ssh(host, cleanup), capture_output=True, timeout=20)
+            try:
+                result = subprocess.run(ssh(host, cleanup), capture_output=True, text=True, timeout=30)
+                if result.returncode:
+                    cleanup_errors.append(f'{host}: {result.stderr[-500:]}')
+            except Exception as exc:
+                cleanup_errors.append(str(exc))
+        if args.report and Path(args.report).is_file():
+            destination = Path(args.report)
+            saved = json.loads(destination.read_text())
+            saved['cleanup_errors'] = cleanup_errors
+            if cleanup_errors: saved['ok'] = False
+            destination.write_text(json.dumps(saved, indent=2)+'\n')
+        if cleanup_errors:
+            raise RuntimeError('owned test cleanup failed: ' + '; '.join(cleanup_errors))
 
 
 def main():
