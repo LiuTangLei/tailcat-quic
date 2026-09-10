@@ -2,9 +2,22 @@ name: Test
 
 on:
   push:
-    branches: [main, h3-v0.6]
+    branches: [h3-v0.6]
+    # Documentation-only updates do not need the full three-platform matrix.
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - 'LICENSE.*'
+      - '.gitignore'
   pull_request:
-    branches: [main, h3-v0.6]
+    branches: [h3-v0.6]
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - 'LICENSE'
+      - 'LICENSE.*'
+      - '.gitignore'
   workflow_dispatch:
   workflow_call:
 

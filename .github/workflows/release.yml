@@ -2,8 +2,8 @@ name: Release
 
 on:
   push:
-    # New releases use ordinary version numbers; historical tags still work.
-    tags: ["v[0-9]*"]
+    # Only fork releases; v0.6.0 is the inherited upstream tag.
+    tags: ["v[0-9]*", "!v0.6.0"]
   workflow_dispatch:
 
 permissions:
@@ -11,6 +11,9 @@ permissions:
 
 jobs:
   verify:
+    # Gate the expensive reusable tests, not just packaging. Manual runs on
+    # branches and workflows copied into other forks must not start a release.
+    if: github.repository == 'LiuTangLei/tailcat-quic' && startsWith(github.ref, 'refs/tags/v') && github.ref_name != 'v0.6.0'
     uses: ./.github/workflows/test.yml
   packages:
     needs: verify
