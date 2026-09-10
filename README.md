@@ -1,151 +1,88 @@
-# Tailcat H3
+# tailcat-quic
 
-A **QUIC/HTTP/3-only** fork of [tailscale/tailcat v0.6.0](https://github.com/tailscale/tailcat/tree/v0.6.0). Connect two machines using a connection code, without a Tailscale account, control server, root privileges, or system routing changes.
+基于 [官方 tailcat v0.6.0](https://github.com/tailscale/tailcat/tree/v0.6.0) 的点对点 QUIC 加密隧道。**默认使用 HTTP/3 流量特征和 BBRv3 拥塞控制**，复制一段连接码即可连接两台机器，无需账号、控制服务器或手动配置证书。
 
-This fork reuses the authenticated H3 transport from [LiuTangLei/tailscale](https://github.com/LiuTangLei/tailscale). **TCP proxy connections use reliable HTTP/3 CONNECT streams**, avoiding a second user-space TCP stack inside QUIC. UDP/IP datagrams use HTTP/3 CONNECT-IP and QUIC DATAGRAM on the same authenticated H3 connection. Neither path wraps WireGuard ciphertext. **BBRv3 is selected by the application on both QUIC endpoints.** Changing the operating system's TCP congestion-control setting does not select the QUIC controller.
+支持端口转发、字节流传输、文件传输和 SSH。只使用 QUIC 数据面，不提供 WireGuard/AWG 模式；需要标准 WireGuard 请使用官方 tailcat。
 
-The v0.6.0-h3.3 release combines the reliable TCP stream path with validated shared-copy, passive-batching and owned-write-buffer optimizations. The shared experiment improved forward throughput and server memory use, but reverse single-stream throughput decreased by about 15%; loaded latency is not uniformly better. See [the measurements and release-validation boundaries](docs/release-validation-v0.6.0-h3.3.md). This is a proxy tool, not a claim that a general-purpose IP VPN now matches WireGuard on every path.
+## 安装
 
-The executable is still named `tailcat`. Both endpoints should upgrade together to a version advertising the reliable TCP-stream capability. Older H3 peers lacking it receive an explicit incompatibility error, not a WG fallback. Both endpoints must run this H3 fork. Its versioned `tch3…` connection codes are deliberately separate from upstream `tc…` codes. For standard WireGuard tailcat, use the [official project](https://github.com/tailscale/tailcat).
+从 [Releases](https://github.com/LiuTangLei/tailcat-quic/releases/latest) 下载对应平台的包，用同页的 `checksums.txt` 校验后解压。支持 Linux、macOS 和 Windows。
 
-## Install
-
-Download the archive for your operating system and architecture from [Releases](https://github.com/LiuTangLei/tailcat/releases), verify it against `checksums.txt`, and put `tailcat` (`tailcat.exe` on Windows) on your PATH.
+**项目名为 `tailcat-quic`，命令仍是 `tailcat`（Windows 为 `tailcat.exe`）。两端均需安装本项目版本。**
 
 ```sh
 tailcat version
 tailcat --help
 ```
 
-Build from source with the Go version specified in `go.mod`:
+## 快速使用
 
-```sh
-git clone https://github.com/LiuTangLei/tailcat.git
-cd tailcat
-go build -trimpath -o tailcat ./cmd/tailcat
-```
-
-The release uses pinned, published dependency versions. It does not need sibling source directories, a manually supplied certificate, an AWG profile, or transport-selection flags. Use a checked-out release tag for a reproducible source build. Because the module pins transport forks through `replace` directives, building from a checkout is the supported source-install procedure.
-
-## Forward a local service
-
-On the machine running the service:
+在提供服务的机器上，将本机 TCP 8080 端口开放给持有连接码的客户端：
 
 ```sh
 tailcat serve 8080
-# Copy the generated tch3… connection code privately.
 ```
 
-On the client:
+复制输出的完整 `tch3…` 连接码，在另一台机器执行：
 
 ```sh
 tailcat forward 'tch3…' 18080:8080
 ```
 
-Open `http://127.0.0.1:18080` on the client. Numeric `serve` and `forward` retain their upstream TCP-only CLI semantics; library UDP APIs are separate. Forward listeners bind to loopback by default. Multiple mappings can share a single process:
+随后访问客户端的 `http://127.0.0.1:18080`。把示例里的 `tch3…` 替换为实际连接码；本地转发端口默认只监听回环地址。`serve PORT` 和 `forward` 是 TCP 命令，不会自动开放同端口的 UDP。
+
+其他常用方式：
 
 ```sh
+# 多端口转发：服务端与客户端分别执行
 tailcat serve 8080,3306
 tailcat forward 'tch3…' 18080:8080 13306:3306
-```
 
-Use the **actual, complete** generated code in place of `tch3…` in every example.
-
-## Pipe bytes
-
-Run on the receiver:
-
-```sh
-tailcat
-```
-
-Copy its code, then run on the sender:
-
-```sh
-printf 'hello over H3\n' | tailcat 'tch3…'
-```
-
-The default receiver accepts one connection and exits after the stream ends. For a persistent network service, use `serve`.
-
-## Check connectivity
-
-```sh
-tailcat ping 'tch3…'
-tailcat ping --until-direct --timeout=30s 'tch3…'
-tailcat --verbose forward 'tch3…' 18080:8080
-```
-
-Magicsock provides endpoint discovery and NAT traversal. A direct path and a DERP relay are alternative **paths**, not different tunnel protocols: the data plane remains H3. A successful discovery ping alone is not evidence of an authenticated H3 application-data session. See the release validation report for actual data-transfer coverage.
-
-DERP discovery remains visible to the relay, and a relayed connection still has the outer DERP transport's properties and throughput limits. H3 does not make traffic invisible, reproduce every browser fingerprint, or guarantee connectivity on networks that block QUIC or the selected relay.
-
-## Files and SSH
-
-Share a directory read-only:
-
-```sh
+# 只读共享目录：服务端执行
 tailcat serve --files=./shared:ro
-```
-
-On a client:
-
-```sh
+# 客户端列出或下载文件
 tailcat ls 'tch3…'
 tailcat cp 'tch3…:example.txt' ./example.txt
+
+# 检查直连是否建立
+tailcat ping --until-direct --timeout=30s 'tch3…'
 ```
 
-For an SSH service with explicit SSH public-key authentication:
+连接码是接入凭据，请私下传递，不要放进公开 issue、DNS 记录或日志截图。更多选项见 `tailcat serve --help`、`tailcat forward --help` 和 `tailcat ssh --help`。
+
+## 默认流量特征
+
+| 项目 | 实际行为 |
+| --- | --- |
+| 直连传输 | UDP 上的 QUIC，使用真正的 HTTP/3，TLS ALPN 为 `h3`；不发送 WireGuard 握手或加密数据包。 |
+| TCP 业务 | 每条业务连接对应独立的 HTTP/3 CONNECT 可靠流，多个流共享 QUIC 连接。 |
+| UDP/IP 数据 | 通过 CONNECT-IP / QUIC DATAGRAM 传输，保留不可靠数据报语义；丢失的 DATAGRAM 不由 QUIC 重传。 |
+| 连接发现 | 复用 magicsock 的端点发现、NAT 打洞和 DERP；无需登录 Tailscale。 |
+| 中继 | 不能直连时可经 DERP 承载加密数据；公网看到的外层是 DERP 连接，不能把它描述成直连 HTTP/3 流量。 |
+| 拥塞控制 | 两端默认使用用户态 BBRv3，不需要修改系统 TCP 参数或手动指定带宽。 |
+
+这里的“混淆”是用 QUIC/HTTP/3 替代 WireGuard 数据面的协议特征，**不是保证与普通浏览器访问完全不可区分**。发现流量、握手特征、地址、包长和时序仍可能被观察；只允许 TCP 或封锁 QUIC/DERP 的网络仍可能无法连接。
+
+协议参考：[HTTP/3（RFC 9114）](https://www.rfc-editor.org/rfc/rfc9114.html)、[QUIC DATAGRAM（RFC 9221）](https://www.rfc-editor.org/rfc/rfc9221.html)、[CONNECT-IP（RFC 9484）](https://www.rfc-editor.org/rfc/rfc9484.html)。
+
+## 加密与身份认证
+
+**传输加密：** 使用 QUIC 的 TLS 1.3 握手和认证加密保护业务数据及完整性；AES-GCM 或 ChaCha20-Poly1305 等具体套件由 TLS 协商，并非固定强制一种算法。不是明文 HTTP，也不是在 QUIC 内再运行 WireGuard 加密层。详见 [RFC 9001](https://www.rfc-editor.org/rfc/rfc9001.html)。
+
+**双向认证：** 连接码包含服务端节点公钥和随机接入密钥。节点认证使用 `Noise_IK_25519_ChaChaPoly_BLAKE2s`，并将双方身份和接入密钥绑定到当前 TLS 会话；只知道节点公钥或只建立 TLS 连接，不能获得转发权限。可额外使用 `--allow` 限定客户端节点。
+
+**证书与密钥：** TLS 证书自动在本地生成，无需购买域名证书或手动互换证书；信任由连接码和节点证明建立，而非公开网站 CA。长期连接使用 QUIC Key Update，并继续检查节点撤销，不为定时重新握手而中断 SSH 或文件流；这不等同于 WireGuard 的完整重握手周期。
+
+连接码、私钥和被开放的服务共同决定访问范围。仅开放必要端口，详细边界见 [SECURITY.md](SECURITY.md)。吞吐和延迟取决于链路，不承诺所有方向都优于 WireGuard；已有测量与发行验证保留在 [docs](docs/)。
+
+## 源码构建
+
+使用 `go.mod` 指定的 Go 版本，从本仓库构建：
 
 ```sh
-tailcat serve --ssh-authorized-keys=./authorized_keys ssh
-tailcat ssh 'tch3…'
+git clone https://github.com/LiuTangLei/tailcat-quic.git
+cd tailcat-quic
+go build -trimpath -o tailcat ./cmd/tailcat
 ```
 
-Use `tailcat serve --help`, `tailcat cp --help`, and `tailcat ssh --help` for the other upstream v0.6 service options. Serving `all`, `exit-node`, writable files, or a shell grants substantial access; expose only what the receiving client needs. In particular, `no-auth-ssh` intentionally relies on tunnel admission rather than SSH authentication and must not be given a public connection code.
-
-## Persistent identity and client restrictions
-
-To preserve a server identity and connection secret across restarts:
-
-```sh
-tailcat genkey --key=default
-tailcat serve 8080
-```
-
-To restrict a server to a particular client identity, generate a client key on that client:
-
-```sh
-tailcat genkey --key=client-default --client
-```
-
-Copy the printed **public** client key to the server's allowlist:
-
-```sh
-tailcat serve --allow='nodekey:CLIENT_PUBLIC_KEY' 8080
-```
-
-The client still needs the H3 connection code. Possession of a listed public key is not enough: the client must prove the matching private key and the connection credential. Private key files and connection codes are credentials; never commit them, put them in public DNS, or include them in issue logs.
-
-## Protocol and security
-
-* There is one H3 data plane: reliable CONNECT streams for TCP proxy connections and CONNECT-IP / QUIC DATAGRAM for datagrams. No WG/AWG negotiation or fallback is started. Each TCP CONNECT is accepted only on an already authenticated QUIC session and is checked against the configured service policy.
-* The connection code selects the H3 protocol version and contains the server identity, discovery information, and a mandatory random connection secret.
-* Client admission requires that secret and respects the optional node allowlist. The H3 handshake additionally binds both node identities to the current TLS session. No trust-on-first-use certificate acceptance or external control-plane identity exchange is required.
-* BBRv3 runs in userspace inside the pinned QUIC library, independently for each sending endpoint. A configured controller is not a promise of higher speed on every path or of production-scale congestion fairness.
-* The inherited path-discovery and networking dependencies may contain WireGuard compatibility types. Their presence in the dependency graph does not mean a WireGuard data-plane device is instantiated.
-
-Read [SECURITY.md](SECURITY.md) before exposing services. This is an independent fork, not a Tailscale-supported product. Browser/WASM interoperability with upstream is not provided by this native H3 release.
-
-## Development and release validation
-
-```sh
-go test -count=1 -timeout=15m ./...
-go test -race -p=1 -parallel=1 -count=1 -timeout=20m ./...
-go vet ./...
-```
-
-CI verifies Linux, macOS, and Windows. Release packaging uses the checked-in build tags and emits checksums. Release notes distinguish runtime-tested platforms and paths from cross-compilation-only checks; finite tests cannot prove the absence of all defects.
-
-## Credits and license
-
-Based on Tailscale's tailcat **v0.6.0**, commit `790406204c002a6f109ef7c6a30a436601a1f6a8`, and the Tailscale open-source networking stack. Original copyright and BSD-3-Clause license are retained in [LICENSE](LICENSE). QUIC, TLS, and other dependencies retain their own licenses and source attribution.
+本项目是独立 fork，不是 Tailscale 官方支持的产品；官方客户端及浏览器/WASM 客户端不能直接使用本项目的连接码。原始版权与 BSD-3-Clause 许可证见 [LICENSE](LICENSE)，依赖声明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。

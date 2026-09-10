@@ -2,7 +2,8 @@ name: Release
 
 on:
   push:
-    tags: ["v*-h3.*"]
+    # New releases use ordinary version numbers; historical tags still work.
+    tags: ["v[0-9]*"]
   workflow_dispatch:
 
 permissions:
@@ -13,7 +14,8 @@ jobs:
     uses: ./.github/workflows/test.yml
   packages:
     needs: verify
-    if: startsWith(github.ref, 'refs/tags/v') && contains(github.ref_name, '-h3.')
+    # v0.6.0 belongs to the inherited upstream history, not this fork's code.
+    if: startsWith(github.ref, 'refs/tags/v') && github.ref_name != 'v0.6.0' && github.repository == 'LiuTangLei/tailcat-quic'
     runs-on: ubuntu-latest
     timeout-minutes: 40
     permissions:

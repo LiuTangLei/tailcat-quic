@@ -104,10 +104,10 @@ def verify(assets, tag, revision):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--tag", required=True)
-    parser.add_argument("--repo", default="LiuTangLei/tailcat")
+    parser.add_argument("--repo", default="LiuTangLei/tailcat-quic")
     parser.add_argument("--assets", type=Path, help="verify an existing download instead of downloading")
     args = parser.parse_args()
-    if not re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+-h3\.[0-9]+", args.tag):
+    if not re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?", args.tag):
         parser.error("unexpected release tag")
     revision = run(["git", "rev-parse", "HEAD"], capture_output=True).stdout.strip()
     if args.assets:

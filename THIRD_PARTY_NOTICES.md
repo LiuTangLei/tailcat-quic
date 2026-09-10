@@ -1,6 +1,6 @@
 # Third-party notices
 
-Tailcat H3 retains the original tailcat and Tailscale BSD-3-Clause copyright and license in LICENSE. Other dependencies retain their respective licenses in their published source distributions. This file additionally reproduces notices for the new QUIC controller integration; it does not imply endorsement by upstream authors.
+tailcat-quic retains the original tailcat and Tailscale BSD-3-Clause copyright and license in LICENSE. Other dependencies retain their respective licenses in their published source distributions. This file additionally reproduces notices for the new QUIC controller integration; it does not imply endorsement by upstream authors.
 
 ## quic-go
 

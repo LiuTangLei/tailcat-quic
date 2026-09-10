@@ -1,4 +1,4 @@
-# Independent H3 fork release packages. Build tags are checked by Go tests.
+# tailcat-quic release packages. The CLI remains tailcat for compatibility.
 version: 2
 
 builds:
@@ -36,23 +36,24 @@ archives:
       - docs/release-validation*.md
 
 nfpms:
-  - package_name: tailcat-h3
-    homepage: https://github.com/LiuTangLei/tailcat
+  - package_name: tailcat-quic
+    homepage: https://github.com/LiuTangLei/tailcat-quic
     maintainer: LiuTangLei
-    description: Point-to-point native-IP HTTP/3 tunnel with userspace BBRv3, without a Tailscale control plane.
+    description: Point-to-point QUIC tunnel with HTTP/3 traffic, TLS 1.3 and userspace BBRv3; no account or control plane.
     license: BSD-3-Clause
     formats: [deb, rpm]
     bindir: /usr/bin
-    conflicts: [tailcat]
+    conflicts: [tailcat, tailcat-h3]
+    replaces: [tailcat-h3]
     contents:
       - src: LICENSE
-        dst: /usr/share/licenses/tailcat-h3/LICENSE
+        dst: /usr/share/licenses/tailcat-quic/LICENSE
       - src: THIRD_PARTY_NOTICES.md
-        dst: /usr/share/licenses/tailcat-h3/THIRD_PARTY_NOTICES.md
+        dst: /usr/share/licenses/tailcat-quic/THIRD_PARTY_NOTICES.md
       - src: README.md
-        dst: /usr/share/doc/tailcat-h3/README.md
+        dst: /usr/share/doc/tailcat-quic/README.md
       - src: SECURITY.md
-        dst: /usr/share/doc/tailcat-h3/SECURITY.md
+        dst: /usr/share/doc/tailcat-quic/SECURITY.md
 
 checksum:
   name_template: checksums.txt
@@ -60,7 +61,7 @@ checksum:
 release:
   github:
     owner: LiuTangLei
-    name: tailcat
+    name: tailcat-quic
   draft: true
   # The maintainer publishes the draft only after checking the packaged artifacts.
-  name_template: "v{{ .Version }} — Tailcat H3"
+  name_template: "tailcat-quic v{{ .Version }}"

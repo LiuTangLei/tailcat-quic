@@ -1,6 +1,6 @@
-# Security of the H3 fork
+# Security of tailcat-quic
 
-This document describes the independent `LiuTangLei/tailcat` H3 fork. Do not assume upstream WireGuard tailcat's cryptographic design, compatibility, or support policy applies unchanged.
+This document describes the independent `LiuTangLei/tailcat-quic` QUIC fork. Do not assume upstream WireGuard tailcat's cryptographic design, compatibility, or support policy applies unchanged.
 
 ## Report a vulnerability
 

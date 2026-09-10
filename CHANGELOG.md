@@ -1,4 +1,11 @@
-# tailcat changelog
+# tailcat-quic changelog
+
+## Unreleased
+
+- Rename the repository and public project name to `tailcat-quic`; the CLI remains `tailcat`.
+- Rename the first public Release display title to `tailcat-quic v0.6.0`. Retain its immutable build tag, download assets and checksums.
+- Simplify the README with quick usage, actual HTTP/3 traffic characteristics, TLS 1.3 encryption and session-bound node authentication.
+- Update release tooling for the new repository and ordinary version numbers, without changing transport behavior or published dependencies.
 
 ## v0.6.0-h3.3 (2026-09-10)
 
