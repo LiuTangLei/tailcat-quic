@@ -5,6 +5,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -45,6 +46,17 @@ var (
 // TempDirs via integration.BinaryInfo.CopyTo.
 func buildTailcat(t *testing.T) string {
 	t.Helper()
+	// Release verification runs the same CLI regressions against the actual
+	// downloaded archive, never a silently rebuilt replacement executable.
+	if binary := os.Getenv("TAILCAT_TEST_BINARY"); binary != "" {
+		if !filepath.IsAbs(binary) {
+			t.Fatal("TAILCAT_TEST_BINARY must be absolute")
+		}
+		if info, err := os.Stat(binary); err != nil || !info.Mode().IsRegular() {
+			t.Fatalf("invalid TAILCAT_TEST_BINARY: %v", err)
+		}
+		return binary
+	}
 	dir := t.TempDir()
 	buildOnce.Do(func() { buildErr = buildTailcatBinary(dir) })
 	if buildErr != nil {
@@ -245,8 +257,13 @@ func newTestEnv(t *testing.T) *testEnv {
 // the test cache environment. Callers pass all flags explicitly,
 // including --derpmap-url=e.derpMapURL where needed.
 func (e *testEnv) cmd(args ...string) *exec.Cmd {
-	cmd := exec.Command(e.bin, args...)
+	return e.cmdContext(e.t.Context(), args...)
+}
+
+func (e *testEnv) cmdContext(ctx context.Context, args ...string) *exec.Cmd {
+	cmd := exec.CommandContext(ctx, e.bin, args...)
 	cmd.Env = e.env
+	cmd.WaitDelay = 5 * time.Second
 	return cmd
 }
 

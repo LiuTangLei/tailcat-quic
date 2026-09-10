@@ -4,9 +4,11 @@
 package main
 
 import (
+	"context"
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 )
 
 // TestPing verifies the ping subcommand against a plain server, which
@@ -20,7 +22,9 @@ func TestPing(t *testing.T) {
 	_, addr, _ := e.startServer()
 
 	t.Run("ping", func(t *testing.T) {
-		out, err := e.cmd("--key=new", "--derpmap-url="+e.derpMapURL, "ping", addr).CombinedOutput()
+		ctx, cancel := context.WithTimeout(t.Context(), 45*time.Second)
+		defer cancel()
+		out, err := e.cmdContext(ctx, "--key=new", "--derpmap-url="+e.derpMapURL, "ping", addr).CombinedOutput()
 		if err != nil {
 			t.Fatalf("ping: %v\n%s", err, out)
 		}
@@ -30,7 +34,9 @@ func TestPing(t *testing.T) {
 	})
 
 	t.Run("until_direct", func(t *testing.T) {
-		out, err := e.cmd("--key=new", "--derpmap-url="+e.derpMapURL, "ping", "--until-direct", "--timeout=30s", addr).CombinedOutput()
+		ctx, cancel := context.WithTimeout(t.Context(), 45*time.Second)
+		defer cancel()
+		out, err := e.cmdContext(ctx, "--key=new", "--derpmap-url="+e.derpMapURL, "ping", "--until-direct", "--timeout=30s", addr).CombinedOutput()
 		if err != nil {
 			t.Fatalf("ping --until-direct: %v\n%s", err, out)
 		}

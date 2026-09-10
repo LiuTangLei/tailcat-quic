@@ -31,5 +31,26 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      # GoReleaser creates a draft. Publication is a separate maintainer action
-      # after the release assets and validation report have been checked.
+      # GoReleaser creates a draft. Publication remains a separate maintainer
+      # action, after every packaged executable check below succeeds.
+
+  verify-packages:
+    needs: packages
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    permissions:
+      contents: write # draft release assets require collaborator access
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: Verify checksums, build identity and actual packaged CLI
+        run: python scripts/verify-release-assets.py --tag "${{ github.ref_name }}" --repo "${{ github.repository }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GOWORK: "off"
