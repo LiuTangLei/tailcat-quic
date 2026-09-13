@@ -34,9 +34,14 @@ There's a
 [container image](https://github.com/tailscale/tailcat/pkgs/container/tailcat):
 
 ```sh
-$ docker pull ghcr.io/tailscale/tailcat:v0.1.0  # or :latest
-$ docker run --rm -it ghcr.io/tailscale/tailcat:latest
+$ docker pull ghcr.io/tailscale/tailcat:latest  # or :vx.y.z
+$ docker run --rm -i ghcr.io/tailscale/tailcat:latest
 ```
+
+Don't add `-t`: a pty is a single byte stream, so it merges the
+status output that tailcat writes to stderr (including the listening
+address) into stdout with the tunnel data, and no redirection can
+separate the two again. Use `-i` alone when piping through stdin.
 
 ## Go toolchain
 
