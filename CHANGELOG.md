@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Serving local ports works from Windows: the server resolves
+  `localhost` itself instead of using the hosts file, which Windows
+  ships without localhost entries, so the name no longer escapes to
+  real DNS servers. It also dials both 127.0.0.1 and ::1, reaching
+  services bound to only one loopback address. Official binaries also
+  no longer build with the `netgo` tag that forced Go's pure resolver
+  on Windows and macOS; they now use the operating system's resolver
+  there, like a default `go build` does.
+  ([#108](https://github.com/tailscale/tailcat/issues/108), reported
+  by [@Sammy-T](https://github.com/Sammy-T))
 - `tailcat forward` takes an `--open-browser` flag that opens a web
   browser to the forwarded local port; `tailcat browse <tc-addr>` is
   an alias for `tailcat forward --open-browser <tc-addr> 0:80`.
