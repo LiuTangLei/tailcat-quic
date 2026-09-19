@@ -1,9 +1,9 @@
 module github.com/tailscale/tailcat
 
 // Published, immutable H3 dependencies; no local checkout or build overlay.
-replace tailscale.com => github.com/LiuTangLei/tailscale v1.102.3-tailcat.3
+replace tailscale.com => github.com/LiuTangLei/tailcat-tailscale v1.102.4-tailcat.1
 
-replace github.com/quic-go/quic-go => github.com/LiuTangLei/quic-go v0.62.0-tailcat.3
+replace github.com/quic-go/quic-go => github.com/LiuTangLei/tailcat-quic-go v0.62.0-tailcat.4
 
 go 1.27.1
 

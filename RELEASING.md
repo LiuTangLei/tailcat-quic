@@ -8,8 +8,8 @@ Publish immutable versions of the QUIC and Tailscale H3 dependencies first, afte
 
 For the first H3 release the pins are:
 
-- `github.com/LiuTangLei/quic-go v0.62.0-tailcat.1`
-- `github.com/LiuTangLei/tailscale v1.102.3-tailcat.1`
+- `github.com/LiuTangLei/tailcat-quic-go v0.62.0-tailcat.4`
+- `github.com/LiuTangLei/tailcat-tailscale v1.102.4-tailcat.1`
 
 The upstream Go import paths are intentionally retained through module replacements. Build this CLI from a checked-out tag rather than using `go install …@version`, which does not support a main module's dependency replacements.
 
