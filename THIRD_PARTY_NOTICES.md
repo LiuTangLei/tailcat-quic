@@ -4,7 +4,7 @@ Tailcat H3 retains the original tailcat and Tailscale BSD-3-Clause copyright and
 
 ## quic-go
 
-Source: https://github.com/LiuTangLei/quic-go/tree/v0.62.0-tailcat.3 (fork of https://github.com/quic-go/quic-go).
+Source: https://github.com/LiuTangLei/tailcat-quic-go/tree/v0.62.0-tailcat.4 (fork of https://github.com/quic-go/quic-go).
 
 MIT License
 
