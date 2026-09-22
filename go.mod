@@ -3,7 +3,7 @@ module github.com/tailscale/tailcat
 // Published, immutable H3 dependencies; no local checkout or build overlay.
 replace tailscale.com => github.com/LiuTangLei/tailscale v1.102.3-tailcat.3
 
-replace github.com/quic-go/quic-go => github.com/LiuTangLei/quic-go v0.62.0-tailcat.3
+replace github.com/quic-go/quic-go => github.com/LiuTangLei/quic-go v0.63.0-tailscale.1
 
 go 1.27.1
 
@@ -92,7 +92,7 @@ require (
 	github.com/pierrec/lz4/v4 v4.1.26 // indirect
 	github.com/pires/go-proxyproto v0.8.1 // indirect
 	github.com/quic-go/qpack v0.6.0 // indirect
-	github.com/quic-go/quic-go v0.62.0 // indirect
+	github.com/quic-go/quic-go v0.63.0 // indirect
 	github.com/refraction-networking/utls v1.8.2 // indirect
 	github.com/safchain/ethtool v0.3.0 // indirect
 	github.com/tailscale/certstore v0.1.1-0.20260409135935-3638fb84b77d // indirect
