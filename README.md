@@ -55,7 +55,7 @@ H3 直传路径专门适配了 `Server.Listen`：显式监听端口优先于通�
 
 共用 QUIC 库已同步 0.63，保留此前的批量收发、受限队列、握手和关闭语义修复。底层 gVisor 更新到与上游 0.7 对齐的版本，恢复经上游修复后的 CUBIC/RACK。内核 TUN 批读对使用用户态网络栈的 Tailcat 不直接适用，不能把 Tailscale IP 隧道的提速数字当作 Tailcat 测速结果。
 
-发布前性能与兼容性结果见 `docs/release-validation-v0.7.0-h3.1.md`；没有证据的方向不承诺提速。
+发布前性能与兼容性结果见 `docs/release-validation-v0.7.0-h3.2.md`；没有证据的方向不承诺提速。
 
 ## 安全边界
 

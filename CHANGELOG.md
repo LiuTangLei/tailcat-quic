@@ -1,6 +1,15 @@
 # tailcat-quic changelog
 
-## v0.7.0-h3.1 (2026-09-22)
+## v0.7.0-h3.2 (2026-09-22)
+
+- Retain the complete upstream 0.7 merge and shared H3/QUIC optimizations below.
+- Fix the final SSH shutdown race exposed by the h3.1 release gate: normal Close gives peer trailers/FIN a bounded receive drain instead of immediately resetting the peer's sender. Explicit cancellation remains an error; no delivery check is suppressed.
+- Bound that drain by both five seconds and one MiB, using the existing reader and buffer. Verify full response/trailer delivery, silent-peer cleanup and continuing-peer budget exhaustion.
+- Repeated the previously failing SSH forced-command test 40 times and SSH/exec race regressions three times; require new tagged and packaged platform gates before publication.
+
+The h3.1 candidate below was not published because its final macOS release gate failed. Its immutable source tag and failed workflow are retained. See [h3.2 validation](docs/release-validation-v0.7.0-h3.2.md).
+
+## v0.7.0-h3.1 (unpublished candidate, 2026-09-22)
 
 - Merge official Tailcat v0.7.0, including UDP exit-node forwarding, localhost/Windows fixes, older OpenSSH SFTP compatibility, `Server.Listen`, browse, exec and SSH forced-command support.
 - Preserve the independent H3-only application: reliable TCP streams, QUIC DATAGRAM for UDP, TLS 1.3, node/connection-secret authentication and userspace BBRv3. Both endpoints use this fork; official `tc` codes remain incompatible.

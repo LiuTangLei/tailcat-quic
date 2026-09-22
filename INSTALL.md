@@ -29,4 +29,4 @@ go build -trimpath -o tailcat ./cmd/tailcat
 
 不要使用官方仓库的 `go install github.com/tailscale/tailcat/cmd/tailcat@latest` 来安装本混淆版，那会得到不同的传输实现。
 
-具体使用、安全边界和发布验证结果见 README、SECURITY.md 及 `docs/release-validation-v0.7.0-h3.1.md`。
+具体使用、安全边界和发布验证结果见 README、SECURITY.md 及 `docs/release-validation-v0.7.0-h3.2.md`。

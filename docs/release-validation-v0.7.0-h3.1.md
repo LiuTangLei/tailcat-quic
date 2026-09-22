@@ -1,5 +1,11 @@
 # Tailcat v0.7.0-h3.1 release validation
 
+**Historical unpublished candidate.** The final-tag run `35758516988` exposed
+an SSH shutdown reset race despite the earlier passing runtime CI. Publication
+was stopped before packages were created. See the h3.2 report for the bounded
+close-drain fix and its new release gates; this document retains the original
+performance and compatibility evidence without relabeling the failed tag.
+
 This document records pre-tag source and WAN evidence. The tag's Release
 workflow additionally gates publication on Linux/macOS/Windows tests, all
 cross-builds, package SHA-256 checks and end-to-end tests using the actual
