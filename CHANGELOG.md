@@ -1,11 +1,13 @@
 # tailcat-quic changelog
 
-## v0.7.0-h3.2 (2026-09-22)
+## v0.7.0-h3.2 (prerelease, 2026-09-22)
 
 - Retain the complete upstream 0.7 merge and shared H3/QUIC optimizations below.
 - Fix the final SSH shutdown race exposed by the h3.1 release gate: normal Close gives peer trailers/FIN a bounded receive drain instead of immediately resetting the peer's sender. Explicit cancellation remains an error; no delivery check is suppressed.
 - Bound that drain by both five seconds and one MiB, using the existing reader and buffer. Verify full response/trailer delivery, silent-peer cleanup and continuing-peer budget exhaustion.
 - Repeated the previously failing SSH forced-command test 40 times and SSH/exec race regressions three times; require new tagged and packaged platform gates before publication.
+
+The final two-round h3.2 comparison improved US-to-AU means by about 6.3% (P1) and 4.0% (P4), but AU-to-US means declined about 11.9% and 25.4%. All complete samples and UDP/content checks are retained in the validation report. This release is explicitly a prerelease and does not replace the existing stable build.
 
 The h3.1 candidate below was not published because its final macOS release gate failed. Its immutable source tag and failed workflow are retained. See [h3.2 validation](docs/release-validation-v0.7.0-h3.2.md).
 

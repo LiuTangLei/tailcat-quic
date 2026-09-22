@@ -4,7 +4,7 @@
 
 ## 预编译包
 
-打开 https://github.com/LiuTangLei/tailcat-quic/releases/latest ，选择相应系统和架构，同时下载 `checksums.txt`。不要只凭文件名判断版本，解压后执行 `tailcat version`。
+打开 https://github.com/LiuTangLei/tailcat-quic/releases ，选择 `v0.7.0-h3.2` 对应系统和架构，同时下载 `checksums.txt`。0.7 因方向性性能回退标为预发布；`/releases/latest` 仍指向现有稳定版。不要只凭文件名判断版本，解压后执行 `tailcat version`。
 
 Linux/macOS 可以用 `sha256sum -c checksums.txt --ignore-missing`（macOS 可用 `shasum -a 256` 对照校验值）；Windows 可以用 PowerShell `Get-FileHash -Algorithm SHA256`。校验成功后解压，把 `tailcat` 或 `tailcat.exe` 放到 PATH 中。
 

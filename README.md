@@ -6,7 +6,9 @@
 
 ## 安装
 
-从 [Releases](https://github.com/LiuTangLei/tailcat-quic/releases/latest) 下载对应平台的包，用同页的 `checksums.txt` 校验后解压。提供 Linux、macOS、Windows 的可执行文件；Linux 另有 deb/rpm。项目名是 `tailcat-quic`，命令仍为 `tailcat`（Windows 为 `tailcat.exe`）。
+**0.7 当前为预发布版**：功能及数据完整性测试通过，但 AU→US 的对照吞吐存在回退，不自动替换现有 0.6 稳定版。两端建议一起测试升级，完整数据见下方发布验证报告。
+
+从 [Releases](https://github.com/LiuTangLei/tailcat-quic/releases) 选择 `v0.7.0-h3.2` 的对应平台包，用同页的 `checksums.txt` 校验后解压。提供 Linux、macOS、Windows 的可执行文件；Linux 另有 deb/rpm。项目名是 `tailcat-quic`，命令仍为 `tailcat`（Windows 为 `tailcat.exe`）。
 
 ```sh
 tailcat version
