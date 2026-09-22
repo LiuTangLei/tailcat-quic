@@ -215,6 +215,9 @@ func probeStrangerSSH(ctx context.Context, logf logger.Logf, derpMapURL, addr, p
 		DERPMapURL:   derpMapURL,
 		DERPMapCache: derpMapCache{},
 	}
+	// The temporary probe owns a complete tunnel client, not just the SSH
+	// stream. Also close it on dial timeout or rejected authentication.
+	defer cl.Close()
 	var conn net.Conn
 	if ipPort, err2 := netip.ParseAddrPort(portOrIPPort); err2 == nil {
 		conn, err = cl.DialTCP(ctx, ipPort)
