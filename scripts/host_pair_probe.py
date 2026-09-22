@@ -136,6 +136,7 @@ def log_evidence(path):
     return {"perf_samples": metrics,"native_h3_no_wg": "Creating native QUIC IP engine (no WireGuard device)" in text,
             "native_wg": "Creating WireGuard device" in text,
             "direct_seen": "now using " in text,
+            "direct_endpoints": sorted(set(re.findall(r"now using (\S+)", text))),
             "relay_forced": "TS_DEBUG_ALWAYS_USE_DERP" in text,
             "panic_seen": "panic:" in text}
 
@@ -448,6 +449,7 @@ def client(args):
                 end = data["end"]
                 result["iperf"].append({"direction": "server-to-client" if reverse else "client-to-server",
                     "streams": streams, "seconds": round(time.monotonic()-started, 2),
+                    "measured_seconds": args.seconds, "omitted_warmup_seconds": 2,
                     "receiver_mbps": round(end["sum_received"]["bits_per_second"]/1e6, 2),
                     "sender_mbps": round(end["sum_sent"]["bits_per_second"]/1e6, 2),
                     "inner_tcp_retransmits": end["sum_sent"].get("retransmits"), "loaded_rtt": latency})

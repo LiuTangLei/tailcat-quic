@@ -57,7 +57,7 @@ def verify(assets, tag, revision):
     extension = ".zip" if system == "windows" else ".tar.gz"
     archive = assets / ("tailcat_" + version + "_" + system + "_" + arch + extension)
     executable_name = "tailcat.exe" if system == "windows" else "tailcat"
-    required = {"LICENSE", "README.md", "SECURITY.md", "THIRD_PARTY_NOTICES.md"}
+    required = {"LICENSE", "README.md", "INSTALL.md", "SECURITY.md", "THIRD_PARTY_NOTICES.md", "release-validation-v0.7.0-h3.1.md"}
     with tempfile.TemporaryDirectory(prefix="tailcat-release-extracted-") as extracted:
         executable = Path(extracted) / executable_name
         # Read just the named regular executable; never trust archive paths,
@@ -86,8 +86,9 @@ def verify(assets, tag, revision):
         if output != tag:
             raise ValueError("packaged executable has the wrong version: " + output)
         info = run(["go", "version", "-m", str(executable)], capture_output=True).stdout
-        for marker in ["github.com/LiuTangLei/quic-go\tv0.62.0-tailcat.3",
-                       "github.com/LiuTangLei/tailscale\tv1.102.3-tailcat.3",
+        for marker in ["github.com/LiuTangLei/quic-go\tv0.63.0-tailscale.1",
+                       "github.com/LiuTangLei/tailscale\tv1.102.5-0.20260922163518-49de27a3a715",
+                       "github.com/LiuTangLei/wireguard-go\tv0.0.33-0.20260910045057-ed22747d204e",
                        "vcs.revision=" + revision, "vcs.modified=false"]:
             if marker not in info:
                 raise ValueError("packaged build identity is missing: " + marker)

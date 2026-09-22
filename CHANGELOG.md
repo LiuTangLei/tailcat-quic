@@ -1,6 +1,17 @@
 # tailcat-quic changelog
 
-## Unreleased
+## v0.7.0-h3.1 (2026-09-22)
+
+- Merge official Tailcat v0.7.0, including UDP exit-node forwarding, localhost/Windows fixes, older OpenSSH SFTP compatibility, `Server.Listen`, browse, exec and SSH forced-command support.
+- Preserve the independent H3-only application: reliable TCP streams, QUIC DATAGRAM for UDP, TLS 1.3, node/connection-secret authentication and userspace BBRv3. Both endpoints use this fork; official `tc` codes remain incompatible.
+- Pin shared QUIC 0.63 and the H3 integration library carrying the existing bounded I/O/lifecycle work. Backport matching upstream Android DNS/CA/netmon support and gVisor CUBIC/RACK clock fixes, without introducing duplicate dependency repositories.
+- Fix H3 listener precedence and accepted-connection ownership; listener closure leaves accepted streams alive, while server shutdown releases them.
+- Close temporary tunnel clients after the new DNS/SSH exposure probe, including rejected/timeout paths, preventing leftover DERP work.
+- Remove forced legacy resolver build flags and keep release tags synchronized with the selected dependency's feature set. Verify every packaged native executable and its immutable dependency pins before publishing.
+
+In the two-round AU/US comparison, US-to-AU four-stream mean increased from 328.16 to 354.15 Mbps, while single-stream mean decreased from 304.02 to 287.46 Mbps. Reverse means were nearly unchanged. Final runtime/UDP checks passed, but loaded latency still has spikes. This is not a universal speed-up guarantee. See [exact methods, samples and limitations](docs/release-validation-v0.7.0-h3.1.md).
+
+## Earlier unreleased branding changes
 
 - Rename the repository and public project name to `tailcat-quic`; the CLI remains `tailcat`.
 - Rename the first public Release display title to `tailcat-quic v0.6.0`. Retain its immutable build tag, download assets and checksums.
