@@ -111,6 +111,15 @@ The final fixture also passed sequential/concurrent hashes, idle recovery and
 cleanup. Observed loaded echo reached about 399 ms in that run. Long-duration
 soak, diverse NATs, high-rate UDP and real Android devices are not covered here.
 
+## Forced relay smoke test
+
+The post-fix CLI was also run with DERP forced on both endpoints. Both logs
+reported forced relay and no direct endpoint; H3/no-WG checks, hashes,
+concurrent transfers, idle recovery and cleanup passed. With three measured
+seconds after two seconds of warmup, P1 throughput was 23.82/22.08 Mbps.
+Loaded echo reached 1235 ms, so this is a functionality smoke test, not a
+relay-latency guarantee. UDP was not measured in this forced-relay fixture.
+
 ## WG and SG scope
 
 Earlier same-host native-WG diagnostics also showed low throughput and heavy
@@ -129,6 +138,12 @@ race tests passed. Android DNS/runtime support unit-test binaries were executed
 on Linux amd64; physical Android behavior is not claimed. Release build tags
 are checked against the actual selected feature set, not a stale copied list.
 
+Pre-tag CI run `35756462078` on runtime commit `711d88b7e` passed all
+Linux, macOS and Windows full tests/race checks, dependency tidy/portability,
+and all seven cross-builds. Subsequent source edits were only reports and
+package/probe verification scripts. The final tag's Release run repeats the
+gates and verifies the actual artifacts.
+
 The workflow checks all seven executable targets and creates Linux deb/rpm
 packages. Native Linux/macOS/Windows jobs verify the downloaded archive and
 binary version, immutable dependency versions, clean VCS revision, documentation
@@ -145,6 +160,7 @@ contain infrastructure endpoints. Public summaries use aliases only.
 - `au-us/driver.json`: finite alternating comparison and each cleanup status.
 - `au-us/baseline-{1,2}.json`, `candidate-{1,2}.json`: all 16 paired samples.
 - `final-check-au-us.json`: post-fix runtime/UDP recheck and cleanup.
+- `relay-check-au-us.json`: independent forced-DERP smoke test and cleanup.
 - Baseline CLI SHA-256: `eb4e76b5c811c509a9434b0017d597cca74c446667e6933e732873ba537dfcd1`.
 - Paired candidate SHA-256: `6f887a5f2693820fd6a5476bdee6a1b8e466af84b2b68fbdc204fbff1828e041`.
 - Final runtime-check SHA-256: `0166f3910e538f56bd148e33d7d7dccf4779cac0df6e1a3daa129db29b25a598`.
