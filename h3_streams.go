@@ -13,30 +13,58 @@ type h3CaptureFactory struct {
 	*quicbind.Factory
 	lb *locoBackend
 }
+
 func (f h3CaptureFactory) New(host wgtransport.Host) (wgtransport.Backend, error) {
 	b, err := f.Factory.New(host)
-	if err != nil { return nil, err }
+	if err != nil {
+		return nil, err
+	}
 	f.lb.h3Backend = b.(*quicbind.Backend)
 	return b, nil
 }
 
 func (s *Server) h3TCPHandler(lb *locoBackend) func([32]byte, netip.AddrPort) func(net.Conn) {
 	return func(peer [32]byte, dst netip.AddrPort) func(net.Conn) {
-		// The backend obtains peer exclusively from the authenticated QUIC
-		// session. Keep the same live allowlist and service/port gates as the
-		// IP path, even though TCP payload no longer enters the packet filter.
+		// Identity is obtained only from the authenticated QUIC session.
+		// The stream path must enforce the same live peer and service gates.
 		var pub key.NodePublic
-		if err := pub.UnmarshalText([]byte("nodekey:"+hexNodeKey(peer))); err != nil { return nil }
-		if _, ok := lb.peerConfig(pub); !ok { return nil }
+		if err := pub.UnmarshalText([]byte("nodekey:" + hexNodeKey(peer))); err != nil {
+			return nil
+		}
+		if _, ok := lb.peerConfig(pub); !ok {
+			return nil
+		}
 		if dst.Addr() == lb.addr {
+			// Explicit listeners take precedence, as on the IP/netstack path.
+			if ln := s.listenerForPort("tcp", dst.Port()); ln != nil {
+				return func(c net.Conn) {
+					lifetime, ok := c.(interface{ Done() <-chan struct{} })
+					if !ok {
+						c.Close()
+						return
+					}
+					ln.handle(c)
+					// The backend closes a stream when its callback returns.
+					// Accept transfers ownership, so wait for that owner's Close
+					// or session shutdown rather than just the handoff.
+					<-lifetime.Done()
+				}
+			}
 			allowed := s.ServedTCPPorts == nil
 			for _, r := range s.ServedTCPPorts {
-				if dst.Port() >= r.First && dst.Port() <= r.Last { allowed = true; break }
+				if dst.Port() >= r.First && dst.Port() <= r.Last {
+					allowed = true
+					break
+				}
 			}
-			if !allowed || s.OnTCP == nil { return nil }
+			if !allowed || s.OnTCP == nil {
+				return nil
+			}
 			return s.OnTCP(dst.Port())
 		}
-		if s.OnTCPForward == nil { return nil }
+		if s.OnTCPForward == nil {
+			return nil
+		}
 		if nat64Prefix.Contains(dst.Addr()) {
 			a := dst.Addr().As16()
 			var v4 [4]byte
@@ -50,7 +78,9 @@ func (s *Server) h3TCPHandler(lb *locoBackend) func([32]byte, netip.AddrPort) fu
 func hexNodeKey(k [32]byte) string {
 	const digits = "0123456789abcdef"
 	var b [64]byte
-	for i, v := range k { b[i*2],b[i*2+1] = digits[v>>4],digits[v&15] }
+	for i, v := range k {
+		b[i*2], b[i*2+1] = digits[v>>4], digits[v&15]
+	}
 	return string(b[:])
 }
 

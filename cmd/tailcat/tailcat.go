@@ -33,6 +33,7 @@ import (
 	"github.com/peterbourgon/ff/v4"
 	"github.com/peterbourgon/ff/v4/ffhelp"
 	"github.com/tailscale/tailcat"
+	"github.com/tailscale/tailcat/internal/localhostdns"
 	"go4.org/mem"
 	xmaps "golang.org/x/exp/maps"
 	"tailscale.com/derp/derpserver"
@@ -90,7 +91,7 @@ func getLogf() logger.Logf {
 // package-level flag value pointers.
 func newRootCommand() *ff.Command {
 	rootFS := ff.NewFlagSet("tailcat")
-	flagServe = rootFS.StringLong("serve", "", "comma-separated list of port numbers, port ranges, or service names to serve; the same list the serve subcommand takes as arguments. Service names are: 'all' (serve all ports), 'exit-node' (run an exit node for all addresses), 'ssh' (public-key-authenticated SSH server; see serve's --ssh-authorized-keys flag), 'no-auth-ssh' (auth-free SSH server), 'files' (file server for SFTP clients; see serve's --files flag). If empty, it accepts a single connection on any port, writes it to stdout, and exits.")
+	flagServe = rootFS.StringLong("serve", "", "comma-separated list of port numbers, port ranges, or service names to serve; the same list the serve subcommand takes as arguments. Service names are: 'all' (serve all ports), 'exit-node' (run an exit node for all addresses), 'ssh' (public-key-authenticated SSH server; see serve's --ssh-authorized-keys flag), 'no-auth-ssh' (auth-free SSH server), 'files' (file server for SFTP clients; see serve's --files flag), 'exec' (run the command after -- for each connection, with the connection as its stdio). If empty, it accepts a single connection on any port, writes it to stdout, and exits.")
 	flagKey = rootFS.StringLong("key", "", "'new' for an ephemeral key. If empty, the default saved key is used if it exists ('default' in server mode, 'client-default' in client modes; see genkey), else an ephemeral key. Otherwise the path to a *.private.json or a name like 'foo' to read it from $CONFIG/tailcat/keys/foo.private.json")
 	flagVerbose = rootFS.BoolLong("verbose", "be verbose")
 	flagJSON = rootFS.BoolLong("json", "in server mode, write {\"listenAddr\": ...} JSON to stdout")
@@ -137,11 +138,12 @@ func newRootCommand() *ff.Command {
 		Subcommands: []*ff.Command{
 			{
 				Name:      "serve",
-				Usage:     "tailcat serve [flags] [<port,service,...> ...]",
+				Usage:     "tailcat serve [flags] [<port,service,...> ...] [-- <command> [args...]]",
 				ShortHelp: "run a server (the default when tailcat is run with no arguments)",
 				LongHelp:  serveLongHelp,
 				Flags:     serveFS,
 				Exec: func(ctx context.Context, args []string) error {
+					args, execArgs := splitExecArgs(args)
 					spec := *flagServe
 					if len(args) > 0 {
 						if spec != "" {
@@ -149,7 +151,7 @@ func newRootCommand() *ff.Command {
 						}
 						spec = strings.Join(args, ",")
 					}
-					server(getLogf(), spec)
+					server(getLogf(), spec, execArgs)
 					return nil
 				},
 			},
@@ -195,7 +197,7 @@ func newRootCommand() *ff.Command {
 						mode = ":wo+"
 					}
 					*flagFiles = dir + mode
-					server(getLogf(), "")
+					server(getLogf(), "", nil)
 					return nil
 				},
 			},
@@ -203,6 +205,7 @@ func newRootCommand() *ff.Command {
 			cpCommand(rootFS),
 			lsCommand(rootFS),
 			forwardCommand(rootFS),
+			browseCommand(rootFS),
 			{
 				Name:      "parse",
 				Usage:     "tailcat parse <tc-addr>",
@@ -261,13 +264,17 @@ func newRootCommand() *ff.Command {
 			if len(args) > 0 && args[0] == "help" {
 				return ff.ErrHelp
 			}
+			args, execArgs := splitExecArgs(args)
 			serverMode := len(args) == 0 || *flagServe != ""
 			if len(args) > 0 && serverMode {
 				return usagef("no positional arguments are valid along with --serve")
 			}
 			if serverMode {
-				server(getLogf(), *flagServe)
+				server(getLogf(), *flagServe, execArgs)
 				return nil
+			}
+			if execArgs != nil {
+				return usagef("a -- command is only valid in server mode")
 			}
 			if len(args) > 2 {
 				return usagef("too many arguments; client mode takes <tc-addr> [<port>]")
@@ -322,6 +329,12 @@ Anywhere a <tc-addr> argument is accepted, a DNS name whose
 "tailcat=" TXT record contains one may be used instead:
 
 	tailcat ssh example.com
+
+But beware: a tailcat address is normally a secret, and a DNS TXT
+record is public, so a server named in DNS must authenticate its
+clients some other way: --allow at the tunnel layer, or the ssh
+service's --ssh-authorized-keys. Never publish a no-auth-ssh server's
+address; that gives a shell to anyone who reads the TXT record.
 
 Client mode, ping. Each pong reports whether it arrived via a DERP
 relay or a direct path. --until-direct keeps pinging (bounded by
@@ -425,9 +438,24 @@ to the same port on localhost. Service names are:
 	files        file server for SFTP clients like scp and sftp,
 	             rooted in the --files directory (default: the
 	             current directory, read-only)
+	exec         run the command given after "--" for each
+	             connection to any port not otherwise served, with
+	             the connection as the command's stdin and stdout
+	             (like inetd); its stderr is the server's
 
 With no arguments, the server accepts a single connection on any
 port, writes it to stdout, and exits.
+
+A command after "--" implies the exec service, unless the ssh or
+no-auth-ssh service is also given: then SSH sessions run only that
+command in place of a shell (like OpenSSH's ForceCommand), with a
+PTY if the client asks for one. Such a server offers no shell, no
+client-chosen command, and no SFTP. The client's requested command,
+if any, is passed to the command in $SSH_ORIGINAL_COMMAND.
+
+The command in either form gets the peer's node key in
+$TAILCAT_PEER_KEY (in --allow's format), and its tailcat IP:port in
+$TAILCAT_REMOTE_ADDR.
 
 Flags must come before the port and service arguments.
 
@@ -462,6 +490,15 @@ Run an exit node (clients can reach the server's whole network):
 Serve the current directory read-only to scp and sftp clients:
 
 	tailcat serve files
+
+Run a command for each connection, with the connection as its stdio:
+
+	tailcat serve exec -- /usr/bin/fortune
+
+Serve SSH that runs only one command, in place of a shell:
+
+	tailcat serve --ssh-authorized-keys=alice@github ssh -- ./deploy.sh
+	tailcat serve no-auth-ssh -- git-upload-pack /srv/repo.git
 
 Serve a directory read-write, as a flat write-only drop box, or as a
 recursive write-only drop box:
@@ -1177,10 +1214,51 @@ func clientResolveMode(args []string) error {
 	return nil
 }
 
-func server(logf logger.Logf, serveSpec string) {
+// splitExecArgs separates the positional arguments ff left over
+// into those before and after a "--" separator, the latter being the
+// command for the exec service and the SSH services' forced command.
+// ff drops the "--" itself when it terminates flag parsing (nothing
+// but flags preceded it), but keeps it when it follows a positional
+// argument, so the separator is located in os.Args, of which the
+// leftover arguments are always a suffix. execArgs is nil without a
+// separator, and empty with one followed by nothing.
+func splitExecArgs(args []string) (positional, execArgs []string) {
+	i := slices.Index(os.Args, "--")
+	if i < 0 {
+		return args, nil
+	}
+	execArgs = os.Args[i+1:]
+	positional = args[:len(args)-len(execArgs)]
+	if n := len(positional); n > 0 && positional[n-1] == "--" {
+		positional = positional[:n-1]
+	}
+	return positional, execArgs
+}
+
+// server runs a tailcat server. execArgs is the command given after
+// "--", or nil.
+func server(logf logger.Logf, serveSpec string, execArgs []string) {
 	portSet, services, err := parsePortSet(serveSpec)
 	if err != nil {
 		log.Fatalf("invalid port or service to serve: %v", err)
+	}
+	if execArgs != nil {
+		if len(execArgs) == 0 {
+			log.Fatal("no command given after --")
+		}
+		exe, err := exec.LookPath(execArgs[0])
+		if err != nil {
+			log.Fatalf("exec command: %v", err)
+		}
+		execArgs = append([]string{exe}, execArgs[1:]...)
+		if services == nil {
+			services = set.Set[string]{}
+		}
+		if !services.Contains("ssh") && !services.Contains("no-auth-ssh") {
+			services.Add("exec")
+		}
+	} else if services.Contains("exec") {
+		log.Fatal("the 'exec' service requires a command after --")
 	}
 	if *flagFiles != "" {
 		if !tailCatSSHEnabled {
@@ -1204,6 +1282,9 @@ func server(logf logger.Logf, serveSpec string) {
 	}
 	if *flagSSHAuthorizedKeys != "" && !sshWithAuth {
 		log.Fatal("--ssh-authorized-keys requires the 'ssh' service")
+	}
+	if (sshWithAuth || sshWithoutAuth) && execArgs != nil && services.Contains("files") {
+		log.Fatal("the 'files' service cannot be served with an SSH -- command, which allows nothing but that command")
 	}
 	var sshAuthorizedKeys []string
 	if *flagSSHAuthorizedKeys != "" {
@@ -1302,10 +1383,11 @@ func server(logf logger.Logf, serveSpec string) {
 	if sshServices && !tailcat.SupportsSSHServer() {
 		log.Fatalf("Tailscale SSH server not supported on %v", runtime.GOOS)
 	}
-	// Outside the accept-one-connection stdout mode (and exit-node
-	// mode, which accepts any port), tighten the packet filter to just
-	// the served ports for defense in depth behind the OnTCP gate.
-	if !oneShotStdout && !services.Contains("exit-node") {
+	// Outside the accept-one-connection stdout mode (and the exit-node
+	// and exec services, which accept any port), tighten the packet
+	// filter to just the served ports for defense in depth behind the
+	// OnTCP gate.
+	if !oneShotStdout && !services.Contains("exit-node") && !services.Contains("exec") {
 		ports := slices.Sorted(maps.Keys(portSet))
 		if sshServices && !portSet.Contains(22) {
 			ports = append([]uint16{22}, ports...)
@@ -1326,9 +1408,15 @@ func server(logf logger.Logf, serveSpec string) {
 		}
 	}
 
+	// localDialer dials the local services that incoming connections
+	// are proxied to. Its resolver answers "localhost" itself with
+	// both loopback addresses; see the localhostdns package comment
+	// for why the OS resolver can't be trusted to (issue #108).
+	localDialer := &net.Dialer{Resolver: localhostdns.Resolver}
+
 	tcpForwardTo := func(ipPortStr string) func(net.Conn) {
 		return func(c net.Conn) {
-			localConn, err := net.Dial("tcp", ipPortStr)
+			localConn, err := localDialer.Dial("tcp", ipPortStr)
 			if err != nil {
 				logf("error proxying to %v: %v", ipPortStr, err)
 				c.Close()
@@ -1338,9 +1426,28 @@ func server(logf logger.Logf, serveSpec string) {
 		}
 	}
 
+	udpForwardTo := func(dst netip.AddrPort) func(tailcat.ConnPacketConn) {
+		return func(c tailcat.ConnPacketConn) {
+			localConn, err := net.DialUDP("udp", nil, net.UDPAddrFromAddrPort(dst))
+			if err != nil {
+				logf("error proxying to %v: %v", dst, err)
+				c.Close()
+				return
+			}
+			tailcat.ProxyPacketConns(c, localConn)
+		}
+	}
+
 	if services.Contains("exit-node") {
 		s.OnTCPForward = func(dst netip.AddrPort) (handler func(net.Conn)) {
 			return tcpForwardTo(dst.String())
+		}
+		// Exit-node clients send UDP through the tunnel the same way they
+		// send TCP (DNS, QUIC, ...). Without this, those flows are dropped:
+		// the tunnel is up and TCP works, but every UDP flow silently goes
+		// nowhere. See OnUDPForward and ProxyPacketConns in the README.
+		s.OnUDPForward = func(dst netip.AddrPort) (handler func(tailcat.ConnPacketConn)) {
+			return udpForwardTo(dst)
 		}
 	}
 
@@ -1349,6 +1456,10 @@ func server(logf logger.Logf, serveSpec string) {
 		opts := tailcat.SSHOptions{
 			Shell:          services.Contains("ssh") || services.Contains("no-auth-ssh"),
 			AuthorizedKeys: sshAuthorizedKeys,
+		}
+		if opts.Shell && execArgs != nil {
+			opts.Exec = execArgs
+			fmt.Fprintf(os.Stderr, "# SSH sessions run only %v\n", strings.Join(execArgs, " "))
 		}
 		if services.Contains("files") {
 			fsrv, modeName, err := parseFilesFlag(*flagFiles)
@@ -1361,9 +1472,21 @@ func server(logf logger.Logf, serveSpec string) {
 		sshHandler = s.SSHConnHandler(opts)
 	}
 
+	var execHandler func(net.Conn)
+	if services.Contains("exec") {
+		execHandler = s.ExecConnHandler(execArgs)
+		fmt.Fprintf(os.Stderr, "# Running %v for each connection\n", strings.Join(execArgs, " "))
+	}
+
 	s.OnTCP = func(port uint16) (handler func(net.Conn)) {
 		if port == 22 && sshHandler != nil {
 			return sshHandler
+		}
+		if portSet.Contains(port) {
+			return tcpForwardTo(fmt.Sprintf("localhost:%v", port))
+		}
+		if execHandler != nil {
+			return execHandler
 		}
 		if services.Contains("exit-node") {
 			// Being an exit node includes localhost without needing
@@ -1402,6 +1525,13 @@ func server(logf logger.Logf, serveSpec string) {
 
 	if err := s.Start(); err != nil {
 		log.Fatalf("Server.Start: %v", err)
+	}
+	if sshWithoutAuth && *flagAllow == "" {
+		if execArgs != nil {
+			fmt.Fprintln(os.Stderr, "# ⚠️ WARNING: no-auth-ssh runs the command for anyone with this address; keep it secret (never in a DNS TXT record) or restrict clients with --allow")
+		} else {
+			fmt.Fprintln(os.Stderr, "# ⚠️ WARNING: no-auth-ssh gives a shell to anyone with this address; keep it secret (never in a DNS TXT record) or restrict clients with --allow")
+		}
 	}
 	if devDERP != nil {
 		// Wait until we're connected to our own dev DERP before
@@ -1511,12 +1641,12 @@ func parsePortSet(s string) (ports set.Set[uint16], services set.Set[string], _ 
 			}
 			services.Add(r)
 			continue
-		case "exit-node":
+		case "exit-node", "exec":
 			services.Add(r)
 			continue
 		}
 		if !numRx.MatchString(r) && !portRangeRx.MatchString(r) {
-			return nil, nil, fmt.Errorf("%q is not a known named service (want one of: all, ssh, no-auth-ssh, files, exit-node)", r)
+			return nil, nil, fmt.Errorf("%q is not a known named service (want one of: all, ssh, no-auth-ssh, files, exec, exit-node)", r)
 		}
 		a, b := r, ""
 		if portRangeRx.MatchString(r) {

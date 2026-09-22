@@ -1,83 +1,71 @@
 # tailcat-quic
 
-基于 [官方 tailcat v0.6.0](https://github.com/tailscale/tailcat/tree/v0.6.0) 的点对点 QUIC 加密隧道。**默认使用 HTTP/3 流量特征和 BBRv3 拥塞控制**，复制一段连接码即可连接两台机器，无需账号、控制服务器或手动配置证书。
+基于 [官方 tailcat v0.7.0](https://github.com/tailscale/tailcat/tree/v0.7.0) 的独立点对点加密隧道。默认使用 **HTTP/3、TLS 1.3 和用户态 BBRv3**；TCP 服务使用经过认证的可靠 H3 流，UDP 服务使用 QUIC DATAGRAM。复制连接码即可连接，无需账号、控制服务器或手动分发证书。
 
-支持端口转发、字节流传输、文件传输和 SSH。只使用 QUIC 数据面，不提供 WireGuard/AWG 模式；需要标准 WireGuard 请使用官方 tailcat。
+**应用仅在本仓库维护。** 共用协议实现来自固定版本的 `LiuTangLei/quic-go` 和 `LiuTangLei/tailscale`，不依赖 `tailcat-tailscale` / `tailcat-quic-go` 镜像。只使用 QUIC 数据面，不提供 WG/AWG 切换。`wireguard-go` 依赖里的 TUN/网络基础组件不代表数据又被 WireGuard 加密一次。
 
 ## 安装
 
-从 [Releases](https://github.com/LiuTangLei/tailcat-quic/releases/latest) 下载对应平台的包，用同页的 `checksums.txt` 校验后解压。支持 Linux、macOS 和 Windows。
-
-**项目名为 `tailcat-quic`，命令仍是 `tailcat`（Windows 为 `tailcat.exe`）。两端均需安装本项目版本。**
+从 [Releases](https://github.com/LiuTangLei/tailcat-quic/releases/latest) 下载对应平台的包，用同页的 `checksums.txt` 校验后解压。提供 Linux、macOS、Windows 的可执行文件；Linux 另有 deb/rpm。项目名是 `tailcat-quic`，命令仍为 `tailcat`（Windows 为 `tailcat.exe`）。
 
 ```sh
 tailcat version
 tailcat --help
 ```
 
+**连接双方都需要本 fork。** 使用 `tch3…` 连接码，不能与官方 WireGuard `tc…` 连接码互通；浏览器/WASM 客户端未作为本 fork 的受支持客户端发布。安装细节见 [INSTALL.md](INSTALL.md)。
+
 ## 快速使用
 
-在提供服务的机器上，将本机 TCP 8080 端口开放给持有连接码的客户端：
+服务器分享本地端口：
 
 ```sh
 tailcat serve 8080
 ```
 
-复制输出的完整 `tch3…` 连接码，在另一台机器执行：
+把服务器输出的完整 `tch3…` 连接码通过可信渠道发给客户端：
 
 ```sh
 tailcat forward 'tch3…' 18080:8080
+# 然后访问 http://127.0.0.1:18080
 ```
 
-随后访问客户端的 `http://127.0.0.1:18080`。把示例里的 `tch3…` 替换为实际连接码；本地转发端口默认只监听回环地址。`serve PORT` 和 `forward` 是 TCP 命令，不会自动开放同端口的 UDP。
-
-其他常用方式：
+自动打开浏览器：
 
 ```sh
-# 多端口转发：服务端与客户端分别执行
-tailcat serve 8080,3306
-tailcat forward 'tch3…' 18080:8080 13306:3306
-
-# 只读共享目录：服务端执行
-tailcat serve --files=./shared:ro
-# 客户端列出或下载文件
-tailcat ls 'tch3…'
-tailcat cp 'tch3…:example.txt' ./example.txt
-
-# 检查直连是否建立
-tailcat ping --until-direct --timeout=30s 'tch3…'
+tailcat forward --open-browser 'tch3…' 18080:8080
+# browse 是把远端 80 端口映射到空闲本地端口并打开浏览器的快捷命令
+tailcat browse 'tch3…'
 ```
 
-连接码是接入凭据，请私下传递，不要放进公开 issue、DNS 记录或日志截图。更多选项见 `tailcat serve --help`、`tailcat forward --help` 和 `tailcat ssh --help`。
+SSH 服务必须使用身份限制，尤其不要把无认证 shell 的连接码公开到 DNS：
 
-## 默认流量特征
+```sh
+tailcat serve --ssh-authorized-keys ~/.ssh/authorized_keys ssh
+tailcat ssh 'tch3…'
+```
 
-| 项目 | 实际行为 |
-| --- | --- |
-| 直连传输 | UDP 上的 QUIC，使用真正的 HTTP/3，TLS ALPN 为 `h3`；不发送 WireGuard 握手或加密数据包。 |
-| TCP 业务 | 每条业务连接对应独立的 HTTP/3 CONNECT 可靠流，多个流共享 QUIC 连接。 |
-| UDP/IP 数据 | 通过 CONNECT-IP / QUIC DATAGRAM 传输，保留不可靠数据报语义；丢失的 DATAGRAM 不由 QUIC 重传。 |
-| 连接发现 | 复用 magicsock 的端点发现、NAT 打洞和 DERP；无需登录 Tailscale。 |
-| 中继 | 不能直连时可经 DERP 承载加密数据；公网看到的外层是 DERP 连接，不能把它描述成直连 HTTP/3 流量。 |
-| 拥塞控制 | 两端默认使用用户态 BBRv3，不需要修改系统 TCP 参数或手动指定带宽。 |
+`tailcat serve exec -- COMMAND` 可以为每条连接运行固定程序；SSH 服务中的 `-- COMMAND` 则作为强制命令，不开放任意 shell/SFTP。文件服务、SOCKS5、退出节点和权限参数以对应命令的 `--help` 为准。退出节点模式会允许客户端使用服务器网络访问其他目标，只应分享给可信客户端。
 
-这里的“混淆”是用 QUIC/HTTP/3 替代 WireGuard 数据面的协议特征，**不是保证与普通浏览器访问完全不可区分**。发现流量、握手特征、地址、包长和时序仍可能被观察；只允许 TCP 或封锁 QUIC/DERP 的网络仍可能无法连接。
+## 0.7 合并内容
 
-协议参考：[HTTP/3（RFC 9114）](https://www.rfc-editor.org/rfc/rfc9114.html)、[QUIC DATAGRAM（RFC 9221）](https://www.rfc-editor.org/rfc/rfc9221.html)、[CONNECT-IP（RFC 9484）](https://www.rfc-editor.org/rfc/rfc9484.html)。
+包含上游的 UDP 退出节点转发、Windows localhost 双栈处理、旧 OpenSSH 的 SFTP 兼容、`Server.Listen` TCP/UDP API、Peer 直连/中继状态、browse、exec/SSH 强制命令和 DNS 公开地址安全提示。Linux 可执行文件也保留上游 Android/Termux 的 DNS、系统证书与网络接口兼容入口。
 
-## 加密与身份认证
+H3 直传路径专门适配了 `Server.Listen`：显式监听端口优先于通配回调，连接交给 `Accept` 后不会被旧回调过早关闭；关闭服务时仍能释放连接。
 
-**传输加密：** 使用 QUIC 的 TLS 1.3 握手和认证加密保护业务数据及完整性；AES-GCM 或 ChaCha20-Poly1305 等具体套件由 TLS 协商，并非固定强制一种算法。不是明文 HTTP，也不是在 QUIC 内再运行 WireGuard 加密层。详见 [RFC 9001](https://www.rfc-editor.org/rfc/rfc9001.html)。
+共用 QUIC 库已同步 0.63，保留此前的批量收发、受限队列、握手和关闭语义修复。底层 gVisor 更新到与上游 0.7 对齐的版本，恢复经上游修复后的 CUBIC/RACK。内核 TUN 批读对使用用户态网络栈的 Tailcat 不直接适用，不能把 Tailscale IP 隧道的提速数字当作 Tailcat 测速结果。
 
-**双向认证：** 连接码包含服务端节点公钥和随机接入密钥。节点认证使用 `Noise_IK_25519_ChaChaPoly_BLAKE2s`，并将双方身份和接入密钥绑定到当前 TLS 会话；只知道节点公钥或只建立 TLS 连接，不能获得转发权限。可额外使用 `--allow` 限定客户端节点。
+发布前性能与兼容性结果见 `docs/release-validation-v0.7.0-h3.1.md`；没有证据的方向不承诺提速。
 
-**证书与密钥：** TLS 证书自动在本地生成，无需购买域名证书或手动互换证书；信任由连接码和节点证明建立，而非公开网站 CA。长期连接使用 QUIC Key Update，并继续检查节点撤销，不为定时重新握手而中断 SSH 或文件流；这不等同于 WireGuard 的完整重握手周期。
+## 安全边界
 
-连接码、私钥和被开放的服务共同决定访问范围。仅开放必要端口，详细边界见 [SECURITY.md](SECURITY.md)。吞吐和延迟取决于链路，不承诺所有方向都优于 WireGuard；已有测量与发行验证保留在 [docs](docs/)。
+HTTP/3 是真实协议封装，不是“与浏览器完全无法区分”的保证。私有源站、端口、包长、时序及发现/中继流量仍可能形成特征。保持 TLS 校验、当前节点授权、连接密钥绑定和拥塞控制，不通过取消加密来换取吞吐。
 
-## 源码构建
+连接码含有访问秘密，请视同凭据保管。`--psk=false` 在此 fork 中被拒绝；无需手工证书不代表未经认证。详细说明见 [SECURITY.md](SECURITY.md)。
 
-使用 `go.mod` 指定的 Go 版本，从本仓库构建：
+## 从源码构建
+
+需要 Go 1.27.1 或支持自动下载该工具链的 Go 环境。正常构建只使用 `go.mod` 中可公开下载的固定依赖，不需要本地 worktree 或 `go.work`。
 
 ```sh
 git clone https://github.com/LiuTangLei/tailcat-quic.git
@@ -85,4 +73,4 @@ cd tailcat-quic
 go build -trimpath -o tailcat ./cmd/tailcat
 ```
 
-本项目是独立 fork，不是 Tailscale 官方支持的产品；官方客户端及浏览器/WASM 客户端不能直接使用本项目的连接码。原始版权与 BSD-3-Clause 许可证见 [LICENSE](LICENSE)，依赖声明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+这是独立 fork，不是 Tailscale 官方支持的产品。原始版权及 BSD-3-Clause 许可证见 [LICENSE](LICENSE)，依赖声明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。

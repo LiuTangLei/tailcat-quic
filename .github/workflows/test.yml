@@ -2,22 +2,11 @@ name: Test
 
 on:
   push:
-    branches: [h3-v0.6]
-    # Documentation-only updates do not need the full three-platform matrix.
-    paths-ignore:
-      - '**/*.md'
-      - 'docs/**'
-      - 'LICENSE'
-      - 'LICENSE.*'
-      - '.gitignore'
+    branches: [h3-v0.6, h3-v0.7]
+    paths-ignore: ['**/*.md', 'docs/**', 'LICENSE', 'LICENSE.*', '.gitignore']
   pull_request:
-    branches: [h3-v0.6]
-    paths-ignore:
-      - '**/*.md'
-      - 'docs/**'
-      - 'LICENSE'
-      - 'LICENSE.*'
-      - '.gitignore'
+    branches: [h3-v0.6, h3-v0.7]
+    paths-ignore: ['**/*.md', 'docs/**', 'LICENSE', 'LICENSE.*', '.gitignore']
   workflow_dispatch:
   workflow_call:
 
@@ -45,8 +34,6 @@ jobs:
       - run: go build ./...
       - run: go test -count=1 -timeout=15m ./...
       - run: go vet ./...
-      # Serialize heavyweight OS/network fixtures under instrumentation.
-      # Individual tests still exercise concurrent streams and callbacks.
       - run: go test -race -p=1 -parallel=1 -count=1 -timeout=20m ./...
   tidy:
     runs-on: ubuntu-latest
@@ -60,7 +47,7 @@ jobs:
       - name: Require portable dependency pins
         run: |
           go list -m -json all | python3 -c '
-          import json, pathlib, sys
+          import json, sys
           text = sys.stdin.read(); decoder = json.JSONDecoder()
           while text.strip():
               item, pos = decoder.raw_decode(text.lstrip()); text = text.lstrip()[pos:]

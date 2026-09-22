@@ -2,8 +2,8 @@ name: Release
 
 on:
   push:
-    # Only fork releases; v0.6.0 is the inherited upstream tag.
-    tags: ["v[0-9]*", "!v0.6.0"]
+    # Only fork releases; exclude inherited upstream application tags.
+    tags: ["v[0-9]*", "!v0.6.0", "!v0.7.0"]
   workflow_dispatch:
 
 permissions:
@@ -13,12 +13,12 @@ jobs:
   verify:
     # Gate the expensive reusable tests, not just packaging. Manual runs on
     # branches and workflows copied into other forks must not start a release.
-    if: github.repository == 'LiuTangLei/tailcat-quic' && startsWith(github.ref, 'refs/tags/v') && github.ref_name != 'v0.6.0'
+    if: github.repository == 'LiuTangLei/tailcat-quic' && startsWith(github.ref, 'refs/tags/v') && github.ref_name != 'v0.6.0' && github.ref_name != 'v0.7.0'
     uses: ./.github/workflows/test.yml
   packages:
     needs: verify
-    # v0.6.0 belongs to the inherited upstream history, not this fork's code.
-    if: startsWith(github.ref, 'refs/tags/v') && github.ref_name != 'v0.6.0' && github.repository == 'LiuTangLei/tailcat-quic'
+    # Upstream tags are not this fork's releases.
+    if: startsWith(github.ref, 'refs/tags/v') && github.ref_name != 'v0.6.0' && github.ref_name != 'v0.7.0' && github.repository == 'LiuTangLei/tailcat-quic'
     runs-on: ubuntu-latest
     timeout-minutes: 40
     permissions:

@@ -52,6 +52,77 @@ Both peers need this H3 fork. Standard WireGuard users should use official tailc
 
 The entries below describe the inherited upstream project before this fork.
 
+## Unreleased
+
+- `--serve=exit-node` servers now forward UDP flows; previously only
+  TCP was forwarded, so DNS, QUIC, and other UDP traffic through an
+  exit node went nowhere.
+- Serving local ports works from Windows: the server resolves
+  `localhost` itself instead of using the hosts file, which Windows
+  ships without localhost entries, so the name no longer escapes to
+  real DNS servers. It also dials both 127.0.0.1 and ::1, reaching
+  services bound to only one loopback address. Official binaries also
+  no longer build with the `netgo` tag that forced Go's pure resolver
+  on Windows and macOS; they now use the operating system's resolver
+  there, like a default `go build` does.
+  ([#108](https://github.com/tailscale/tailcat/issues/108), reported
+  by [@Sammy-T](https://github.com/Sammy-T))
+- Go library: `Server.Status()` now includes a `Peer` entry per
+  connected client, with `CurAddr` and `Relay` to tell a direct path
+  from a DERP-relayed one.
+  ([#116](https://github.com/tailscale/tailcat/issues/116), reported
+  by [@Mo3he](https://github.com/Mo3he))
+- Go library: the new `Server.Listen(ctx, network, address)` serves
+  TCP and UDP ports in the standard `net.Listener` shape, as an
+  alternative to the `OnTCP` and `OnUDP` hooks; for UDP, each Accept
+  returns one client flow as a `net.Conn`. Listeners claim their
+  specific ports ahead of the wildcard hooks, and Listen starts the
+  server if it isn't running yet.
+- `tailcat forward` takes an `--open-browser` flag that opens a web
+  browser to the forwarded local port; `tailcat browse <tc-addr>` is
+  an alias for `tailcat forward --open-browser <tc-addr> 0:80`.
+- `exec` service: `tailcat serve exec -- <command>` runs the command
+  for each incoming connection with the connection as its stdin and
+  stdout, like inetd. With the `ssh` or `no-auth-ssh` service, the
+  command after `--` instead replaces the shell for every session,
+  like OpenSSH's `ForceCommand`, with no shell, client-chosen command,
+  or SFTP offered.
+- `tailcat ssh` to a DNS-named destination first probes the server the
+  way a stranger would, with no credentials, and refuses to connect if
+  the server hands out a shell to anyone, since an address published
+  in DNS is public; `--skip-dns-safety-check` opts out. The README,
+  the root help's DNS section, and `serve no-auth-ssh` startup now all
+  warn that DNS-published addresses need `--allow` or
+  `--ssh-authorized-keys`.
+  ([#100](https://github.com/tailscale/tailcat/issues/100))
+- Fixed argument parsing under Termux on Android, whose loader inserts
+  the executable's path as an extra argument.
+  ([#92](https://github.com/tailscale/tailcat/pull/92), [@shaunlee](https://github.com/shaunlee))
+- The linux binaries now work when run directly on Android, under
+  Termux, `adb shell`, or a rooted shell. Android has no
+  `/etc/resolv.conf`, so a plain Go binary there could not resolve any
+  name and failed at startup fetching the DERP map; it also found no
+  CA roots and could not enumerate network interfaces. tailcat now
+  links tailscale.com's `androiddns` and `androidbin` features, which
+  detect Android at runtime, resolve names through Android's DNS
+  resolver daemon, use the system certificate store, and fall back to
+  a synthetic single interface. On regular Linux they do nothing.
+  ([#117](https://github.com/tailscale/tailcat/issues/117), reported
+  by [@risharde](https://github.com/risharde))
+- Updated the tailscale.com dependency to its 2026-09-16 main branch,
+  which brings data path performance work from wireguard-go and
+  gVisor. wireguard-go now moves each batch of packets through one
+  buffer of about 128 KiB instead of a separate buffer per packet,
+  which in upstream's iperf3 benchmarks between two Linux machines
+  raised throughput by 7% to 35% depending on the workload and cut
+  peak memory for TCP transfers by half to three quarters. Small
+  outbound packets such as keepalives and handshakes now use 2 KiB
+  buffers, so packets waiting on a peer with no active session hold
+  at least 97% less memory than before. gVisor's TCP stack, which
+  carries every tailcat connection, now uses CUBIC congestion control
+  and RACK loss detection; both had been switched off because of
+  gVisor bugs that have since been fixed upstream.
+
 ## v0.6.0 (2026-09-04)
 
 - Application-layer UDP support: servers can serve and forward UDP
