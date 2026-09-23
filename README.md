@@ -6,9 +6,9 @@
 
 ## 安装
 
-**0.7 当前为预发布版**：功能及数据完整性测试通过，但 AU→US 的对照吞吐存在回退，不自动替换现有 0.6 稳定版。两端建议一起测试升级，完整数据见下方发布验证报告。
+**当前版本：`v0.7.0-quic.2`**。新增有界读取缓冲区复用和就绪数据合并，保留此前的最终字节交付与 SSH 关闭修复；两端建议一起升级。性能具有方向性，完整交替对照见下方发布验证报告。
 
-从 [Releases](https://github.com/LiuTangLei/tailcat-quic/releases) 选择 `v0.7.0-h3.2` 的对应平台包，用同页的 `checksums.txt` 校验后解压。提供 Linux、macOS、Windows 的可执行文件；Linux 另有 deb/rpm。项目名是 `tailcat-quic`，命令仍为 `tailcat`（Windows 为 `tailcat.exe`）。
+从 [Releases](https://github.com/LiuTangLei/tailcat-quic/releases) 选择 `v0.7.0-quic.2` 的对应平台包，用同页的 `checksums.txt` 校验后解压。提供 Linux、macOS、Windows 的可执行文件；Linux 另有 deb/rpm。项目名是 `tailcat-quic`，命令仍为 `tailcat`（Windows 为 `tailcat.exe`）。
 
 ```sh
 tailcat version
@@ -57,7 +57,7 @@ H3 直传路径专门适配了 `Server.Listen`：显式监听端口优先于通�
 
 共用 QUIC 库已同步 0.63，保留此前的批量收发、受限队列、握手和关闭语义修复。底层 gVisor 更新到与上游 0.7 对齐的版本，恢复经上游修复后的 CUBIC/RACK。内核 TUN 批读对使用用户态网络栈的 Tailcat 不直接适用，不能把 Tailscale IP 隧道的提速数字当作 Tailcat 测速结果。
 
-发布前性能与兼容性结果见 `docs/release-validation-v0.7.0-h3.2.md`；没有证据的方向不承诺提速。
+发布前性能与兼容性结果见 `docs/release-validation-v0.7.0-quic.2.md`；没有证据的方向不承诺提速。`tch3` 是既有连接码协议前缀，不随发布标签改名。
 
 ## 安全边界
 
@@ -74,5 +74,7 @@ git clone https://github.com/LiuTangLei/tailcat-quic.git
 cd tailcat-quic
 go build -trimpath -o tailcat ./cmd/tailcat
 ```
+
+本仓库和共用 QUIC 库均已移除 `.github` 并禁用 GitHub Actions，不再自动云端编译。维护者在本地运行测试和 `scripts/local-package.py` 生成可执行文件、deb/rpm 与校验文件，验证后手动上传 Release。详见 `docs/manual-release.md`。
 
 这是独立 fork，不是 Tailscale 官方支持的产品。原始版权及 BSD-3-Clause 许可证见 [LICENSE](LICENSE)，依赖声明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。

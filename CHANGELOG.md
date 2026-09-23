@@ -1,13 +1,23 @@
 # tailcat-quic changelog
 
-## v0.7.0-h3.2 (prerelease, 2026-09-22)
+## v0.7.0-quic.2 (2026-09-23)
+
+- Use the requested quic.N release naming; keep old unpublished h3.N tags only as immutable history.
+- Remove .github and disable Actions. Build, test and package locally, then publish manually.
+- Reuse owned H3 read buffers with a 2 MiB idle-cache cap, clear bytes between streams and coalesce only already-ready reads without a waiting timer.
+- Preserve the 0.7 listener/SSH lifecycle fixes, authenticated final-byte/FIN drain, BBRv3 and QUIC-only transport. Public pins include the shared 0.63 library with GitHub automation removed.
+- In two alternating runs per build against the preceding 0.7 candidate, four-stream US-to-AU/AU-to-US means improved about 10.5%/44.6%; forward single-stream was essentially unchanged. Limited WAN evidence is not a universal throughput or tail-latency guarantee.
+
+See `docs/release-validation-v0.7.0-quic.2.md` and `docs/manual-release.md`.
+
+## v0.7.0-h3.2 (unpublished historical candidate, 2026-09-22)
 
 - Retain the complete upstream 0.7 merge and shared H3/QUIC optimizations below.
 - Fix the final SSH shutdown race exposed by the h3.1 release gate: normal Close gives peer trailers/FIN a bounded receive drain instead of immediately resetting the peer's sender. Explicit cancellation remains an error; no delivery check is suppressed.
 - Bound that drain by both five seconds and one MiB, using the existing reader and buffer. Verify full response/trailer delivery, silent-peer cleanup and continuing-peer budget exhaustion.
 - Repeated the previously failing SSH forced-command test 40 times and SSH/exec race regressions three times; require new tagged and packaged platform gates before publication.
 
-The final two-round h3.2 comparison improved US-to-AU means by about 6.3% (P1) and 4.0% (P4), but AU-to-US means declined about 11.9% and 25.4%. All complete samples and UDP/content checks are retained in the validation report. This release is explicitly a prerelease and does not replace the existing stable build.
+The final two-round h3.2 comparison improved US-to-AU means by about 6.3% (P1) and 4.0% (P4), but AU-to-US means declined about 11.9% and 25.4%. All complete samples and UDP/content checks are retained in the validation report. This candidate was never published: the final macOS instrumented ping test timed out. Its immutable tag remains as history.
 
 The h3.1 candidate below was not published because its final macOS release gate failed. Its immutable source tag and failed workflow are retained. See [h3.2 validation](docs/release-validation-v0.7.0-h3.2.md).
 

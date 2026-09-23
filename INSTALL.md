@@ -4,7 +4,7 @@
 
 ## 预编译包
 
-打开 https://github.com/LiuTangLei/tailcat-quic/releases ，选择 `v0.7.0-h3.2` 对应系统和架构，同时下载 `checksums.txt`。0.7 因方向性性能回退标为预发布；`/releases/latest` 仍指向现有稳定版。不要只凭文件名判断版本，解压后执行 `tailcat version`。
+打开 https://github.com/LiuTangLei/tailcat-quic/releases ，选择 `v0.7.0-quic.2` 对应系统和架构，同时下载 `checksums.txt`。发布包由维护者本地编译并验证，不依赖 GitHub Actions。不要只凭文件名判断版本，解压后执行 `tailcat version`。
 
 Linux/macOS 可以用 `sha256sum -c checksums.txt --ignore-missing`（macOS 可用 `shasum -a 256` 对照校验值）；Windows 可以用 PowerShell `Get-FileHash -Algorithm SHA256`。校验成功后解压，把 `tailcat` 或 `tailcat.exe` 放到 PATH 中。
 
@@ -29,4 +29,4 @@ go build -trimpath -o tailcat ./cmd/tailcat
 
 不要使用官方仓库的 `go install github.com/tailscale/tailcat/cmd/tailcat@latest` 来安装本混淆版，那会得到不同的传输实现。
 
-具体使用、安全边界和发布验证结果见 README、SECURITY.md 及 `docs/release-validation-v0.7.0-h3.2.md`。
+具体使用、安全边界和发布验证结果见 README、SECURITY.md 及 `docs/release-validation-v0.7.0-quic.2.md`。
