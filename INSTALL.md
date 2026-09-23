@@ -24,11 +24,7 @@ The project tracks the installation/platform matrix documented by upstream Tailc
 | Container | yes | yes | GHCR amd64/arm64 |
 | Nix | yes | yes | repository flake |
 | Go toolchain | yes | yes | verified bootstrap module |
-| Snap | yes, community maintained | external publication required | do not claim until Store package is live |
-| AUR | yes, community maintained | external publication required | do not claim until AUR package is live |
-| conda-forge | yes | external review required | do not claim until feedstock is live |
-
-The last three rows are controlled by third-party registries. The source tree can carry recipes, but a recipe in Git is not the same as a published install command.
+The support goal is platform parity, not one-for-one duplication of every third-party package registry. Linux, macOS and Windows all have verified direct installers, while Release assets and the package-manager methods below provide additional choices.
 
 ## Fast verified installer
 
@@ -154,32 +150,6 @@ Browser traffic is relay-only. A successful WASM build is not reported as a full
 ## Android / Termux
 
 Linux binaries retain upstream 0.7's runtime Android helpers for DNS, CA roots and restricted network-interface discovery. This is a command-line binary, not an Android VPN application.
-
-## External registry publication
-
-Upstream also documents Snap, AUR and conda-forge. Exact one-command parity for those names requires publication outside GitHub:
-
-### Snap Store
-
-Required maintainer setup:
-
-1. Reserve the `tailcat-quic` snap name in the Snap Store.
-2. Install/login with Snapcraft under the publishing account.
-3. Generate a scoped store credential, for example:
-   `snapcraft export-login --snaps tailcat-quic --channels latest/stable -`
-4. If publication is automated, store that value as the repository secret `SNAPCRAFT_STORE_CREDENTIALS`.
-
-Do not put Ubuntu One passwords or SSH private keys in the repository.
-
-### AUR
-
-Publishing `tailcat-quic-bin` requires an AUR account with an SSH public key. The current maintainer machine is not authenticated to AUR, so `yay -S tailcat-quic-bin` must not be advertised yet.
-
-For manual publication, add the maintainer's public SSH key to the AUR account and push the package Git repository directly. If a future GitHub job publishes it, use a dedicated package-only private key secret such as `AUR_SSH_PRIVATE_KEY`, not a general workstation SSH key.
-
-### conda-forge
-
-No project secret is required. The package must first be accepted through `conda-forge/staged-recipes`; once merged, conda-forge creates and owns the feedstock. Until that review is complete, `pixi global install tailcat-quic` must not be advertised as live.
 
 ## GitHub Actions and secrets
 

@@ -53,7 +53,7 @@ Both installers download the selected GitHub Release asset, verify its SHA-256 a
 
 Do **not** add `-t` to the container command when piping tunnel data: a PTY merges stderr status output with stdout tunnel data.
 
-The upstream documentation also lists Snap, AUR and conda-forge. Those are external registries with their own account/review process; this README does not claim those commands until the QUIC package is actually published there. See [INSTALL.md](INSTALL.md) for the exact parity matrix and maintainer publication requirements.
+Third-party registry listings are not a support target for this fork. Platform coverage is: every upstream prebuilt platform remains supported, and every supported desktop/server platform has a verified direct installer or Release package. See [INSTALL.md](INSTALL.md) for the exact matrix.
 
 ### Platform coverage
 

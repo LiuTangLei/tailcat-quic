@@ -40,7 +40,7 @@ irm https://raw.githubusercontent.com/LiuTangLei/tailcat-quic/quic-v0.7/install.
 
 Linux 向けには amd64/arm64/armv7 の tar.gz・deb・rpm、Windows 向けには amd64/arm64 zip、さらに macOS amd64/arm64 tar.gz を提供します。
 
-公式ドキュメントにある Snap、AUR、conda-forge は外部レジストリの公開手続きが必要です。QUIC 版が実際に公開されるまでは「利用可能」とは記載しません。詳細は [INSTALL.md](INSTALL.md) を参照してください。
+このフォークでは、外部パッケージレジストリを一つずつ複製すること自体はサポート目標にしません。上流の prebuilt 対応プラットフォームをすべて維持し、主要なデスクトップ／サーバープラットフォームには検証済みのワンラインインストーラまたは Release パッケージを提供します。詳細は [INSTALL.md](INSTALL.md) を参照してください。
 
 ## クイックスタート
 

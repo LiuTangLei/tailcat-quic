@@ -53,7 +53,7 @@ irm https://raw.githubusercontent.com/LiuTangLei/tailcat-quic/quic-v0.7/install.
 
 使用容器转发 stdin/stdout 时不要加 `-t`；PTY 会把 stderr 状态输出和 stdout 隧道数据混到同一字节流。
 
-官方文档还列出 Snap、AUR 和 conda-forge。这三种依赖外部注册表账号/审核；在 QUIC 包真正发布到对应注册表之前，本 README 不会虚假写成可用。完整对照和维护者需要配置的凭据见 [INSTALL.md](INSTALL.md)。
+本分支不追求逐个复制第三方软件仓库渠道，目标是平台覆盖不能少于官方：官方预编译支持的平台全部保留，并保证常用桌面/服务器平台都有经过校验的一键脚本或 Release 安装包。完整矩阵见 [INSTALL.md](INSTALL.md)。
 
 ### 平台覆盖
 

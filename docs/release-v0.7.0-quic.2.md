@@ -76,4 +76,4 @@ The default release gate remains real local/host validation. For install parity,
 
 The GHCR workflow uses only the automatically generated `GITHUB_TOKEN` with `contents: read` and `packages: write`. No server SSH key, Tailcat credential or long-lived PAT is required. The shared `quic-go` repository remains automation-free.
 
-Snap, AUR and conda-forge are external registries. Their commands are not advertised as live until those registries actually contain `tailcat-quic`; maintainer requirements are documented in [INSTALL.md](../INSTALL.md).
+Third-party registry duplication is intentionally out of scope. The release target is platform parity with upstream prebuilt support plus verified direct installers and Release packages.
