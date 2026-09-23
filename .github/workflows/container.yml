@@ -1,0 +1,68 @@
+name: Publish container
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Existing verified GitHub Release tag
+        required: true
+        default: v0.7.0-quic.2
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  container:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out packaging definition
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Download and verify published Linux binaries
+        shell: bash
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-quic\.[0-9]+$ ]]
+          base="https://github.com/LiuTangLei/tailcat-quic/releases/download/$VERSION"
+          mkdir -p .container/amd64 .container/arm64
+          curl -fsSL "$base/checksums.txt" -o .container/checksums.txt
+          for arch in amd64 arm64; do
+            asset="tailcat_${VERSION#v}_linux_${arch}.tar.gz"
+            curl -fsSL "$base/$asset" -o ".container/$asset"
+            (cd .container && grep "  $asset$" checksums.txt | sha256sum -c -)
+            test "$(tar -tzf ".container/$asset" | grep -cx tailcat)" = 1
+            tar -xOzf ".container/$asset" tailcat > ".container/$arch/tailcat"
+            chmod 755 ".container/$arch/tailcat"
+          done
+          test "$(.container/amd64/tailcat version)" = "$VERSION"
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e94 # v4.3.0
+
+      - name: Log in to GHCR
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push amd64/arm64 image
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .container
+          file: packaging/container/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          provenance: false
+          sbom: false
+          cache-from: ""
+          cache-to: ""
+          build-args: |
+            VERSION=${{ inputs.version }}
+          tags: |
+            ghcr.io/liutanglei/tailcat-quic:${{ inputs.version }}
+            ghcr.io/liutanglei/tailcat-quic:latest

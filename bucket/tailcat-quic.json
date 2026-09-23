@@ -1,0 +1,29 @@
+{
+  "version": "0.7.0-quic.2",
+  "description": "Independent Tailcat QUIC/HTTP3 fork with BBRv3; not the official WireGuard client.",
+  "homepage": "https://github.com/LiuTangLei/tailcat-quic",
+  "license": "BSD-3-Clause",
+  "architecture": {
+    "64bit": {
+      "url": "https://github.com/LiuTangLei/tailcat-quic/releases/download/v0.7.0-quic.2/tailcat_0.7.0-quic.2_windows_amd64.zip",
+      "hash": "c4e55509e55a18342a566543f29c871650597751a54a7b9e8cf66b2b637456fd"
+    },
+    "arm64": {
+      "url": "https://github.com/LiuTangLei/tailcat-quic/releases/download/v0.7.0-quic.2/tailcat_0.7.0-quic.2_windows_arm64.zip",
+      "hash": "de79de329dd1ab7b66e6ff96ef9b75cd071635f35342e4484c4bc8244ca77a16"
+    }
+  },
+  "bin": "tailcat.exe",
+  "pre_install": "if (Test-Path (Join-Path $scoopdir 'apps/tailcat/current')) { throw 'Uninstall the official tailcat Scoop package first; both provide tailcat.exe.' }",
+  "notes": "Run tailcat version; it must report v0.7.0-quic.2. Both peers require this QUIC fork. No service starts automatically.",
+  "checkver": {
+    "github": "https://github.com/LiuTangLei/tailcat-quic"
+  },
+  "autoupdate": {
+    "architecture": {
+      "64bit": {"url": "https://github.com/LiuTangLei/tailcat-quic/releases/download/v$version/tailcat_$version_windows_amd64.zip"},
+      "arm64": {"url": "https://github.com/LiuTangLei/tailcat-quic/releases/download/v$version/tailcat_$version_windows_arm64.zip"}
+    },
+    "hash": {"url": "$baseurl/checksums.txt"}
+  }
+}

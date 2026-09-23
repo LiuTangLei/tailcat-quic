@@ -1,32 +1,206 @@
-# 安装 tailcat-quic
+# Installing tailcat-quic
 
-本页适用于 `LiuTangLei/tailcat-quic`，不是官方使用 WireGuard 的 tailcat。两端都必须安装本 fork，使用 `tch3…` 连接码。
+This page documents the install methods for `LiuTangLei/tailcat-quic`. It is **not** the upstream WireGuard Tailcat package. Both peers must use this QUIC fork and its `tch3…` addresses.
 
-## 预编译包
+Current release: **`v0.7.0-quic.2`**.
 
-打开 https://github.com/LiuTangLei/tailcat-quic/releases ，选择 `v0.7.0-quic.2` 对应系统和架构，同时下载 `checksums.txt`。发布包由维护者本地编译并验证，不依赖 GitHub Actions。不要只凭文件名判断版本，解压后执行 `tailcat version`。
+## Support target
 
-Linux/macOS 可以用 `sha256sum -c checksums.txt --ignore-missing`（macOS 可用 `shasum -a 256` 对照校验值）；Windows 可以用 PowerShell `Get-FileHash -Algorithm SHA256`。校验成功后解压，把 `tailcat` 或 `tailcat.exe` 放到 PATH 中。
+The project tracks the installation/platform matrix documented by upstream Tailcat. The current downloadable release is not narrower than upstream's prebuilt matrix and additionally publishes macOS archives.
 
-Linux 的 deb/rpm 包名为 `tailcat-quic`，与占用同一可执行文件名的 `tailcat` 包冲突，不应同时安装。安装升级不会自动给你的服务器开放 SSH、代理或退出节点服务；这些服务由显式 CLI 命令启动。
+| Method / platform | Upstream Tailcat | tailcat-quic | Notes |
+| --- | --- | --- | --- |
+| Linux amd64 static | yes | yes | tar.gz |
+| Linux arm64 static | yes | yes | tar.gz |
+| Linux armv7 static | yes | yes | tar.gz |
+| Linux deb/rpm, same arches | yes | yes | Release assets |
+| Windows amd64 | yes | yes | zip |
+| Windows arm64 | yes | yes | zip |
+| macOS amd64 / arm64 archive | Homebrew upstream | yes | extra tar.gz assets |
+| FreeBSD/OpenBSD source build | yes | cross-builds pass | amd64/arm64 checked |
+| Browser js/wasm source build | yes | bundle builds | relay-only; runtime browser integration is tracked separately |
+| Homebrew | yes | yes | in-repo tap formula |
+| Scoop | yes | yes | direct manifest URL |
+| Container | yes | yes | GHCR amd64/arm64 |
+| Nix | yes | yes | repository flake |
+| Go toolchain | yes | yes | verified bootstrap module |
+| Snap | yes, community maintained | external publication required | do not claim until Store package is live |
+| AUR | yes, community maintained | external publication required | do not claim until AUR package is live |
+| conda-forge | yes | external review required | do not claim until feedstock is live |
 
-macOS 二进制未作 Apple 公证，首次运行可能需要在系统隐私与安全设置中批准。不要为安装而全局关闭系统安全功能。
+The last three rows are controlled by third-party registries. The source tree can carry recipes, but a recipe in Git is not the same as a published install command.
+
+## Fast verified installer
+
+### Linux / macOS
+
+~~~sh
+curl -fsSL https://raw.githubusercontent.com/LiuTangLei/tailcat-quic/quic-v0.7/install.sh | sh
+~~~
+
+Optional explicit version or install directory:
+
+~~~sh
+curl -fsSL https://raw.githubusercontent.com/LiuTangLei/tailcat-quic/quic-v0.7/install.sh -o /tmp/tailcat-install.sh
+sh /tmp/tailcat-install.sh --version v0.7.0-quic.2 --bin-dir "$HOME/.local/bin"
+~~~
+
+The installer downloads the release archive plus `checksums.txt`, verifies SHA-256 and the executable's reported version, then atomically installs `tailcat`. It does not start a service or change networking.
+
+### Windows PowerShell
+
+~~~powershell
+irm https://raw.githubusercontent.com/LiuTangLei/tailcat-quic/quic-v0.7/install.ps1 | iex
+~~~
+
+The default location is under the current user's `LocalAppData\Programs\tailcat-quic`. The installer validates SHA-256 and version, updates the user PATH unless disabled, and requires no administrator access.
+
+## Prebuilt release packages
+
+[GitHub Releases](https://github.com/LiuTangLei/tailcat-quic/releases) provides:
+
+- Linux amd64 / arm64 / armv7: tar.gz, deb and rpm.
+- Windows amd64 / arm64: zip.
+- macOS amd64 / arm64: tar.gz.
+- `checksums.txt` for all distributable packages.
+
+Verify `tailcat version` after installation. For `v0.7.0-quic.2` it must print exactly:
+
+~~~text
+v0.7.0-quic.2
+~~~
+
+The Linux package name is `tailcat-quic` but the installed command is `tailcat`, so it conflicts with an installed upstream Tailcat package.
+
+## Homebrew
+
+The project carries a tap-compatible formula in `Formula/tailcat-quic.rb`.
+
+One-line install:
+
+~~~sh
+brew tap LiuTangLei/tailcat-quic https://github.com/LiuTangLei/tailcat-quic.git &&   brew install LiuTangLei/tailcat-quic/tailcat-quic
+~~~
+
+The explicit URL is intentional: the application repository is named `tailcat-quic` rather than creating a duplicate `homebrew-tailcat-quic` source repository.
+
+## Scoop
+
+Scoop accepts a manifest URL directly:
+
+~~~powershell
+scoop install https://raw.githubusercontent.com/LiuTangLei/tailcat-quic/quic-v0.7/bucket/tailcat-quic.json
+~~~
+
+The manifest selects amd64 or arm64 and verifies the release SHA-256.
+
+## Container
+
+~~~sh
+docker pull ghcr.io/liutanglei/tailcat-quic:latest
+docker run --rm -i ghcr.io/liutanglei/tailcat-quic:latest
+~~~
+
+A versioned tag is also published:
+
+~~~sh
+docker run --rm -i ghcr.io/liutanglei/tailcat-quic:v0.7.0-quic.2
+~~~
+
+Do not add `-t` when piping tunnel data. A PTY merges stderr status output with stdout tunnel data.
+
+The container is published only for linux/amd64 and linux/arm64, matching upstream's container platform set.
+
+## Nix
+
+Run directly:
+
+~~~sh
+nix run github:LiuTangLei/tailcat-quic/quic-v0.7
+~~~
+
+Install into a profile:
+
+~~~sh
+nix profile install github:LiuTangLei/tailcat-quic/quic-v0.7#tailcat-quic
+~~~
+
+The flake selects verified release binaries for Linux amd64/arm64/armv7 and macOS amd64/arm64.
+
+## Go toolchain / source-only operating systems
+
+Direct `go install github.com/LiuTangLei/tailcat-quic/cmd/tailcat@...` is intentionally not used because the application pins forked public dependencies with Go `replace` directives.
+
+Use the small verified bootstrap module instead:
+
+~~~sh
+go run github.com/LiuTangLei/tailcat-quic/install@v0.7.0-quic.2
+~~~
+
+It downloads the exact source module through the Go module system, checks the recorded module checksum, builds the real `cmd/tailcat` with the release tags, verifies its version and installs it to `GOBIN` / `GOPATH/bin`.
+
+This is the source-build route for FreeBSD and OpenBSD as well. amd64 and arm64 cross-builds are checked before release.
+
+## Browser / WebAssembly
+
+The `web` package builds for `js/wasm`:
+
+~~~sh
+GOOS=js GOARCH=wasm go build ./web
+~~~
+
+Browser traffic is relay-only. A successful WASM build is not reported as a full runtime browser validation; the manual platform workflow runs the real headless-browser integration test separately.
 
 ## Android / Termux
 
-Linux 架构对应的二进制保留上游 0.7 的 Android 运行支持：运行时检测 Android，接入系统 DNS、证书和受限网络接口回退；普通 Linux 不受这些入口影响。它仍是命令行程序，不是 Android VPN 应用。本仓库发布说明会区分交叉编译/单元测试与实际 Android 设备验证。
+Linux binaries retain upstream 0.7's runtime Android helpers for DNS, CA roots and restricted network-interface discovery. This is a command-line binary, not an Android VPN application.
 
-## 源码构建
+## External registry publication
 
-需要 Go 1.27.1。`go.mod` 必须固定公开版本，不要把个人电脑上的绝对路径或开发用 `go.work` 带进发布。
+Upstream also documents Snap, AUR and conda-forge. Exact one-command parity for those names requires publication outside GitHub:
 
-```sh
+### Snap Store
+
+Required maintainer setup:
+
+1. Reserve the `tailcat-quic` snap name in the Snap Store.
+2. Install/login with Snapcraft under the publishing account.
+3. Generate a scoped store credential, for example:
+   `snapcraft export-login --snaps tailcat-quic --channels latest/stable -`
+4. If publication is automated, store that value as the repository secret `SNAPCRAFT_STORE_CREDENTIALS`.
+
+Do not put Ubuntu One passwords or SSH private keys in the repository.
+
+### AUR
+
+Publishing `tailcat-quic-bin` requires an AUR account with an SSH public key. The current maintainer machine is not authenticated to AUR, so `yay -S tailcat-quic-bin` must not be advertised yet.
+
+For manual publication, add the maintainer's public SSH key to the AUR account and push the package Git repository directly. If a future GitHub job publishes it, use a dedicated package-only private key secret such as `AUR_SSH_PRIVATE_KEY`, not a general workstation SSH key.
+
+### conda-forge
+
+No project secret is required. The package must first be accepted through `conda-forge/staged-recipes`; once merged, conda-forge creates and owns the feedstock. Until that review is complete, `pixi global install tailcat-quic` must not be advertised as live.
+
+## GitHub Actions and secrets
+
+This is a public repository. Standard GitHub-hosted runners are free for public repositories under GitHub's current billing rules; larger/GPU runners and storage have separate rules.
+
+The bounded GHCR workflow needs **no manually created repository secret**:
+
+- `GITHUB_TOKEN` is created automatically for each workflow run.
+- The job requests only `contents: read` and `packages: write`.
+- No server SSH keys, Tailcat connection codes or long-lived GitHub PATs are stored.
+
+The shared `LiuTangLei/quic-go` repository remains automation-free.
+
+## Build from a clone
+
+~~~sh
 git clone https://github.com/LiuTangLei/tailcat-quic.git
 cd tailcat-quic
-go build -trimpath -o tailcat ./cmd/tailcat
-./tailcat --help
-```
+git checkout quic-v0.7
+go build -trimpath -tags "$(cat build-tags.txt)" -o tailcat ./cmd/tailcat
+./tailcat version
+~~~
 
-不要使用官方仓库的 `go install github.com/tailscale/tailcat/cmd/tailcat@latest` 来安装本混淆版，那会得到不同的传输实现。
-
-具体使用、安全边界和发布验证结果见 README、SECURITY.md 及 `docs/release-validation-v0.7.0-quic.2.md`。
+See [README.md](README.md), [SECURITY.md](SECURITY.md) and [docs/release-validation-v0.7.0-quic.2.md](docs/release-validation-v0.7.0-quic.2.md).

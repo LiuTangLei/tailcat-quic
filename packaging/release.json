@@ -1,0 +1,22 @@
+{
+  "repository": "LiuTangLei/tailcat-quic",
+  "version": "v0.7.0-quic.2",
+  "source_commit": "a10f1bad68ea327a7bd45202f8c8e9fe9fcf74d0",
+  "base_url": "https://github.com/LiuTangLei/tailcat-quic/releases/download/v0.7.0-quic.2",
+  "platforms": {
+    "linux/amd64": {"asset": "tailcat_0.7.0-quic.2_linux_amd64.tar.gz", "sha256": "67c77d67cc088aad30cd45df5ca5a97183bfd281c3b369f872103d9ef8b474d7"},
+    "linux/arm64": {"asset": "tailcat_0.7.0-quic.2_linux_arm64.tar.gz", "sha256": "ba898960d5e31d5e8392925dc49e132cc81a34aca9b088e0312161c69a00ee89"},
+    "linux/armv7": {"asset": "tailcat_0.7.0-quic.2_linux_armv7.tar.gz", "sha256": "903689f8d1eeebea014d95a34c1b3c3bccc91eb847af39a9825de8aebe89bc46"},
+    "darwin/amd64": {"asset": "tailcat_0.7.0-quic.2_darwin_amd64.tar.gz", "sha256": "1f4a9870922cb0ad2d8154fd4899d6391e1f5c99ed72c1b012a4e0f7336f8e72"},
+    "darwin/arm64": {"asset": "tailcat_0.7.0-quic.2_darwin_arm64.tar.gz", "sha256": "b00f659cd8067caa6ee79f51289872cada470966e43a025842060d003a08e926"},
+    "windows/amd64": {"asset": "tailcat_0.7.0-quic.2_windows_amd64.zip", "sha256": "c4e55509e55a18342a566543f29c871650597751a54a7b9e8cf66b2b637456fd"},
+    "windows/arm64": {"asset": "tailcat_0.7.0-quic.2_windows_arm64.zip", "sha256": "de79de329dd1ab7b66e6ff96ef9b75cd071635f35342e4484c4bc8244ca77a16"}
+  },
+  "source_platforms": ["freebsd/amd64", "freebsd/arm64", "openbsd/amd64", "openbsd/arm64"],
+  "upstream_required_assets": [
+    "linux_amd64.tar.gz", "linux_arm64.tar.gz", "linux_armv7.tar.gz",
+    "linux_amd64.deb", "linux_arm64.deb", "linux_armv7.deb",
+    "linux_amd64.rpm", "linux_arm64.rpm", "linux_armv7.rpm",
+    "windows_amd64.zip", "windows_arm64.zip"
+  ]
+}

@@ -1,80 +1,145 @@
 # tailcat-quic
 
-基于 [官方 tailcat v0.7.0](https://github.com/tailscale/tailcat/tree/v0.7.0) 的独立点对点加密隧道。默认使用 **HTTP/3、TLS 1.3 和用户态 BBRv3**；TCP 服务使用经过认证的可靠 H3 流，UDP 服务使用 QUIC DATAGRAM。复制连接码即可连接，无需账号、控制服务器或手动分发证书。
+**English** · [简体中文](README.zh-CN.md) · [日本語](README.ja.md)
 
-**应用仅在本仓库维护。** 共用协议实现来自固定版本的 `LiuTangLei/quic-go` 和 `LiuTangLei/tailscale`，不依赖 `tailcat-tailscale` / `tailcat-quic-go` 镜像。只使用 QUIC 数据面，不提供 WG/AWG 切换。`wireguard-go` 依赖里的 TUN/网络基础组件不代表数据又被 WireGuard 加密一次。
+An independent QUIC/HTTP/3-only fork of [Tailscale Tailcat v0.7.0](https://github.com/tailscale/tailcat/tree/v0.7.0).
 
-## 安装
+Tailcat-QUIC keeps Tailcat's account-free, control-plane-free peer-to-peer model, but replaces the WireGuard data plane with authenticated HTTP/3 and QUIC. TCP services use reliable HTTP/3 streams, UDP/IP uses QUIC DATAGRAM, TLS 1.3 protects the QUIC session, and userspace BBRv3 is the default congestion controller.
 
-**当前版本：`v0.7.0-quic.2`**。新增有界读取缓冲区复用和就绪数据合并，保留此前的最终字节交付与 SSH 关闭修复；两端建议一起升级。性能具有方向性，完整交替对照见下方发布验证报告。
+**Current release: [v0.7.0-quic.2](https://github.com/LiuTangLei/tailcat-quic/releases/tag/v0.7.0-quic.2)**
 
-从 [Releases](https://github.com/LiuTangLei/tailcat-quic/releases) 选择 `v0.7.0-quic.2` 的对应平台包，用同页的 `checksums.txt` 校验后解压。提供 Linux、macOS、Windows 的可执行文件；Linux 另有 deb/rpm。项目名是 `tailcat-quic`，命令仍为 `tailcat`（Windows 为 `tailcat.exe`）。
+> Both peers must run this fork. `tch3…` addresses are intentionally incompatible with upstream Tailcat's WireGuard `tc…` addresses.
 
-```sh
-tailcat version
-tailcat --help
-```
+## Why this fork
 
-**连接双方都需要本 fork。** 使用 `tch3…` 连接码，不能与官方 WireGuard `tc…` 连接码互通；浏览器/WASM 客户端未作为本 fork 的受支持客户端发布。安装细节见 [INSTALL.md](INSTALL.md)。
+- Real QUIC + HTTP/3 traffic instead of WG/AWG on the data plane.
+- TLS 1.3 plus connection-secret and node authentication.
+- Reliable HTTP/3 streams for TCP services; QUIC DATAGRAM for UDP.
+- Userspace BBRv3.
+- Direct UDP NAT traversal when possible, DERP relay fallback when needed.
+- Upstream Tailcat 0.7 features: TCP/UDP listeners, exit-node UDP forwarding, browse, exec/forced-command SSH, SFTP compatibility, Windows localhost fixes, Android/Termux runtime helpers, and peer path status.
+- Bounded stream-buffer reuse and already-ready read coalescing to reduce allocations and small hand-offs without adding a batching timer.
 
-## 快速使用
+## Install
 
-服务器分享本地端口：
+### Fastest install
 
-```sh
+Linux and macOS:
+
+~~~sh
+curl -fsSL https://raw.githubusercontent.com/LiuTangLei/tailcat-quic/quic-v0.7/install.sh | sh
+~~~
+
+Windows PowerShell:
+
+~~~powershell
+irm https://raw.githubusercontent.com/LiuTangLei/tailcat-quic/quic-v0.7/install.ps1 | iex
+~~~
+
+Both installers download the selected GitHub Release asset, verify its SHA-256 against `checksums.txt`, verify `tailcat version`, and do **not** start a service or change firewall/routing settings.
+
+### Package managers and one-command installs
+
+| Method | Command | Status |
+| --- | --- | --- |
+| Release archives | [GitHub Releases](https://github.com/LiuTangLei/tailcat-quic/releases) | Linux amd64/arm64/armv7, macOS amd64/arm64, Windows amd64/arm64 |
+| Debian / Ubuntu | download the matching `.deb` from Releases | amd64/arm64/armv7 |
+| Fedora / RHEL | download the matching `.rpm` from Releases | amd64/arm64/armv7 |
+| Homebrew | `brew tap LiuTangLei/tailcat-quic https://github.com/LiuTangLei/tailcat-quic.git && brew install LiuTangLei/tailcat-quic/tailcat-quic` | in-repo tap formula |
+| Scoop | `scoop install https://raw.githubusercontent.com/LiuTangLei/tailcat-quic/quic-v0.7/bucket/tailcat-quic.json` | direct manifest |
+| Nix | `nix profile install github:LiuTangLei/tailcat-quic/quic-v0.7#tailcat-quic` | repository flake |
+| Go toolchain | `go run github.com/LiuTangLei/tailcat-quic/install@v0.7.0-quic.2` | verified source bootstrap |
+| Container | `docker run --rm -i ghcr.io/liutanglei/tailcat-quic:latest` | Linux amd64/arm64 GHCR image |
+
+Do **not** add `-t` to the container command when piping tunnel data: a PTY merges stderr status output with stdout tunnel data.
+
+The upstream documentation also lists Snap, AUR and conda-forge. Those are external registries with their own account/review process; this README does not claim those commands until the QUIC package is actually published there. See [INSTALL.md](INSTALL.md) for the exact parity matrix and maintainer publication requirements.
+
+### Platform coverage
+
+The downloadable release covers every upstream prebuilt platform and adds macOS archives:
+
+- Linux: amd64, arm64, armv7 — tar.gz, deb and rpm.
+- Windows: amd64, arm64 — zip.
+- macOS: amd64, arm64 — tar.gz.
+
+The CLI also cross-builds for FreeBSD/OpenBSD amd64 and arm64. The browser/WebAssembly bundle builds from source; browser runtime interoperability is tracked separately because browsers are relay-only and require a real browser integration test.
+
+## Quick start
+
+Serve a local port:
+
+~~~sh
 tailcat serve 8080
-```
+~~~
 
-把服务器输出的完整 `tch3…` 连接码通过可信渠道发给客户端：
+Share the complete `tch3…` address with the other peer over a trusted channel, then forward it locally:
 
-```sh
+~~~sh
 tailcat forward 'tch3…' 18080:8080
-# 然后访问 http://127.0.0.1:18080
-```
+# open http://127.0.0.1:18080
+~~~
 
-自动打开浏览器：
+Open a remote HTTP service directly in your browser:
 
-```sh
-tailcat forward --open-browser 'tch3…' 18080:8080
-# browse 是把远端 80 端口映射到空闲本地端口并打开浏览器的快捷命令
+~~~sh
 tailcat browse 'tch3…'
-```
+~~~
 
-SSH 服务必须使用身份限制，尤其不要把无认证 shell 的连接码公开到 DNS：
+Serve SSH with explicit authorization:
 
-```sh
+~~~sh
 tailcat serve --ssh-authorized-keys ~/.ssh/authorized_keys ssh
 tailcat ssh 'tch3…'
-```
+~~~
 
-`tailcat serve exec -- COMMAND` 可以为每条连接运行固定程序；SSH 服务中的 `-- COMMAND` 则作为强制命令，不开放任意 shell/SFTP。文件服务、SOCKS5、退出节点和权限参数以对应命令的 `--help` 为准。退出节点模式会允许客户端使用服务器网络访问其他目标，只应分享给可信客户端。
+Run a fixed command per incoming connection:
 
-## 0.7 合并内容
+~~~sh
+tailcat serve exec -- /path/to/program arg1 arg2
+~~~
 
-包含上游的 UDP 退出节点转发、Windows localhost 双栈处理、旧 OpenSSH 的 SFTP 兼容、`Server.Listen` TCP/UDP API、Peer 直连/中继状态、browse、exec/SSH 强制命令和 DNS 公开地址安全提示。Linux 可执行文件也保留上游 Android/Termux 的 DNS、系统证书与网络接口兼容入口。
+Use `tailcat --help` and each subcommand's `--help` for file transfer, SOCKS5, exit-node forwarding and advanced authorization options.
 
-H3 直传路径专门适配了 `Server.Listen`：显式监听端口优先于通配回调，连接交给 `Accept` 后不会被旧回调过早关闭；关闭服务时仍能释放连接。
+## Performance
 
-共用 QUIC 库已同步 0.63，保留此前的批量收发、受限队列、握手和关闭语义修复。底层 gVisor 更新到与上游 0.7 对齐的版本，恢复经上游修复后的 CUBIC/RACK。内核 TUN 批读对使用用户态网络栈的 Tailcat 不直接适用，不能把 Tailscale IP 隧道的提速数字当作 Tailcat 测速结果。
+The `v0.7.0-quic.2` read-path optimization reuses bounded 32 KiB stream buffers and coalesces only data that is already ready. It does not delay reads to form larger batches.
 
-发布前性能与兼容性结果见 `docs/release-validation-v0.7.0-quic.2.md`；没有证据的方向不承诺提速。`tch3` 是既有连接码协议前缀，不随发布标签改名。
+In the release A/B test between AU and US1420, four-stream means improved from **333.41 → 368.47 Mbps** in one direction and **211.56 → 305.86 Mbps** in the other. Single-stream means were **299.36 → 299.41 Mbps** and **231.34 → 262.86 Mbps**. These are limited WAN samples, not a universal speed guarantee.
 
-## 安全边界
+The final public-pin Linux release binary was separately measured at **327.43 / 321.95 Mbps** with four TCP streams in the two directions. See [the full validation report](docs/release-validation-v0.7.0-quic.2.md) for methodology, slower samples, loaded latency and limitations.
 
-HTTP/3 是真实协议封装，不是“与浏览器完全无法区分”的保证。私有源站、端口、包长、时序及发现/中继流量仍可能形成特征。保持 TLS 校验、当前节点授权、连接密钥绑定和拥塞控制，不通过取消加密来换取吞吐。
+## Security model
 
-连接码含有访问秘密，请视同凭据保管。`--psk=false` 在此 fork 中被拒绝；无需手工证书不代表未经认证。详细说明见 [SECURITY.md](SECURITY.md)。
+HTTP/3 is genuine protocol framing, not a promise of being indistinguishable from every browser. Private hostnames, ports, packet sizes/timing, discovery traffic and relay behavior can still be observable.
 
-## 从源码构建
+- TLS verification, connection-secret binding and node authorization remain enabled.
+- `--psk=false` is rejected in this fork.
+- TCP streams are opened only on an already authenticated QUIC session and are checked against the live service/peer policy.
+- UDP/IP remains authenticated CONNECT-IP / QUIC DATAGRAM traffic.
+- No WireGuard/AWG data-plane fallback is enabled.
+- A `wireguard-go` dependency may still provide TUN/network primitives; that does **not** add a second WireGuard encryption layer.
 
-需要 Go 1.27.1 或支持自动下载该工具链的 Go 环境。正常构建只使用 `go.mod` 中可公开下载的固定依赖，不需要本地 worktree 或 `go.work`。
+Treat a `tch3…` connection address as a credential. See [SECURITY.md](SECURITY.md).
 
-```sh
+## Build from source
+
+Go 1.27.1 is required.
+
+~~~sh
 git clone https://github.com/LiuTangLei/tailcat-quic.git
 cd tailcat-quic
-go build -trimpath -o tailcat ./cmd/tailcat
-```
+git checkout quic-v0.7
+go build -trimpath -tags "$(cat build-tags.txt)" -o tailcat ./cmd/tailcat
+./tailcat version
+~~~
 
-本仓库和共用 QUIC 库均已移除 `.github` 并禁用 GitHub Actions，不再自动云端编译。维护者在本地运行测试和 `scripts/local-package.py` 生成可执行文件、deb/rpm 与校验文件，验证后手动上传 Release。详见 `docs/manual-release.md`。
+Release builds use immutable public dependency pins. The application lives only in this repository; the shared protocol implementation is maintained in `LiuTangLei/quic-go` and the H3 integration in `LiuTangLei/tailscale`.
 
-这是独立 fork，不是 Tailscale 官方支持的产品。原始版权及 BSD-3-Clause 许可证见 [LICENSE](LICENSE)，依赖声明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+## Release and packaging
+
+The release assets are locally validated before publication. A minimal public-repository GitHub workflow may be used for bounded platform/container jobs on standard GitHub-hosted runners; larger/GPU runners and heavy per-commit builds are intentionally avoided. The shared `quic-go` repository remains automation-free.
+
+See [INSTALL.md](INSTALL.md) for installation details and [docs/manual-release.md](docs/manual-release.md) for maintainer release steps.
+
+This is an independent fork and is not supported by Tailscale. Original copyright and BSD-3-Clause terms are in [LICENSE](LICENSE); dependency notices are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
