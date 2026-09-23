@@ -12,9 +12,9 @@ permissions:
   contents: read
 
 jobs:
-  compatibility:
+  cross-build:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -23,8 +23,7 @@ jobs:
         with:
           go-version-file: go.mod
           cache: false
-
-      - name: Cross-build source-only operating systems
+      - name: FreeBSD and OpenBSD
         shell: bash
         run: |
           set -euo pipefail
@@ -34,12 +33,22 @@ jobs:
             CGO_ENABLED=0 GOOS="$GOOS" GOARCH="$GOARCH" GOWORK=off               go build -mod=readonly -trimpath -o /tmp/tailcat ./cmd/tailcat
           done
 
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.ref }}
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: false
       - name: Build browser WASM
         shell: bash
         run: |
           set -euo pipefail
           CGO_ENABLED=0 GOOS=js GOARCH=wasm GOWORK=off             go build -mod=readonly -trimpath -o /tmp/main.wasm ./web
-
       - name: Headless browser integration
         shell: bash
         run: |
