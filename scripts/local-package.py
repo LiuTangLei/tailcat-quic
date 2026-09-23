@@ -88,7 +88,7 @@ def main() -> None:
             record['files'][probe.name] = hashlib.sha256(probe.read_bytes()).hexdigest()
         if a.test_only:
             continue
-        docs = ['LICENSE', 'README.md', 'SECURITY.md', 'THIRD_PARTY_NOTICES.md']
+        docs = ['LICENSE', 'README.md', 'INSTALL.md', 'SECURITY.md', 'THIRD_PARTY_NOTICES.md']
         validation = 'docs/release-validation-'+a.version+'.md'
         if (root/validation).is_file():
             docs.append(validation)
@@ -122,7 +122,7 @@ def main() -> None:
                       'homepage':'https://github.com/LiuTangLei/tailcat-quic', 'license':'BSD-3-Clause',
                       'conflicts':['tailcat','tailcat-h3'], 'replaces':['tailcat-h3'],
                       'contents':[{'src':str(binary), 'dst':'/usr/bin/tailcat', 'file_info':{'mode':493}}]}
-            for doc in ('LICENSE','README.md','SECURITY.md','THIRD_PARTY_NOTICES.md'):
+            for doc in ('LICENSE','README.md','INSTALL.md','SECURITY.md','THIRD_PARTY_NOTICES.md'):
                 config['contents'].append({'src':str(root/doc),'dst':'/usr/share/doc/tailcat-quic/'+doc,
                                             'file_info':{'mode':420}})
             config_path = out/('nfpm-'+arch+'.json')

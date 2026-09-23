@@ -57,7 +57,7 @@ def verify(assets, tag, revision):
     extension = ".zip" if system == "windows" else ".tar.gz"
     archive = assets / ("tailcat_" + version + "_" + system + "_" + arch + extension)
     executable_name = "tailcat.exe" if system == "windows" else "tailcat"
-    required = {"LICENSE", "README.md", "INSTALL.md", "SECURITY.md", "THIRD_PARTY_NOTICES.md", "release-validation-v0.7.0-h3.2.md"}
+    required = {"LICENSE", "README.md", "INSTALL.md", "SECURITY.md", "THIRD_PARTY_NOTICES.md", "release-validation-" + tag + ".md"}
     with tempfile.TemporaryDirectory(prefix="tailcat-release-extracted-") as extracted:
         executable = Path(extracted) / executable_name
         # Read just the named regular executable; never trust archive paths,
