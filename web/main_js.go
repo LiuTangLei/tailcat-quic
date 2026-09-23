@@ -106,7 +106,17 @@ func tailcatListen(this js.Value, args []js.Value) any {
 			// Like the CLI's default mode, accept a connection on
 			// any port and hand it to the page.
 			return func(c net.Conn) {
+				lifetime, ok := c.(interface{ Done() <-chan struct{} })
+				if !ok {
+					c.Close()
+					return
+				}
 				onConnection.Invoke(makeJSConn(c, port, nil))
+				// The H3 backend closes its connection when this handler
+				// returns. JavaScript only schedules asynchronous reads in
+				// onConnection; wait for its Close or session shutdown, as
+				// an accepted native listener does when transferring ownership.
+				<-lifetime.Done()
 			}
 		}
 		if err := srv.Start(); err != nil {

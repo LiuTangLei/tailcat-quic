@@ -142,7 +142,7 @@ This is the source-build route for FreeBSD and OpenBSD as well. amd64 and arm64 
 The `web` package builds for `js/wasm`:
 
 ~~~sh
-GOOS=js GOARCH=wasm go build ./web
+GOOS=js GOARCH=wasm go build -o tailcat-web.wasm ./web
 ~~~
 
 Browser traffic is relay-only. A successful WASM build is not reported as a full runtime browser validation; the manual platform workflow runs the real headless-browser integration test separately.

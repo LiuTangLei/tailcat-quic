@@ -15,7 +15,6 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"runtime"
 	"time"
 
 	"github.com/fxamacker/cbor/v2"
@@ -46,13 +45,12 @@ var h3CBORDecoder = func() cbor.DecMode {
 }()
 
 // newH3Factory installs one native-IP H3 backend, never a WireGuard device.
+// Browser builds use the same authenticated backend over magicsock's DERP
+// WebSocket PacketConn; they do not require a browser-accessible raw UDP socket.
 // The ephemeral TLS certificate is authenticated by the persistent node key,
 // not by TOFU or a public certificate authority. Both TLS directions additionally
 // prove the connection secret through the session-bound node-auth transcript.
 func newH3Factory(lb *locoBackend) (*quicbind.Factory, error) {
-	if runtime.GOOS == "js" {
-		return nil, errors.New("this native H3 fork does not support browser/WASM clients")
-	}
 	if lb.presharedKey.IsZero() {
 		return nil, errors.New("H3 requires a non-zero connection secret; generate a new H3 key or connection code")
 	}
