@@ -1,5 +1,17 @@
 # tailcat-quic changelog
 
+## v0.7.0-quic.3 (release candidate, 2026-09-25)
+
+- Pin the shared public `quic-go v0.63.0-quic.3` source tag, with lightly tuned BBRv3, bounded DATAGRAM allocation and event-driven final-delivery acknowledgment.
+- Recover reliable streams after abrupt capacity drops; prioritize earlier stream holes and correct full-pipe application-limited classification.
+- Apply bounded, RTT-qualified random-loss tolerance without disabling pacing, authentication, loss recovery or receiver gap protection.
+- Enable the existing authenticated H3 transport in browser/WASM through DERP/WebSocket and keep asynchronous browser receivers alive until they close.
+- Preserve all seven executable archive targets plus three deb and three rpm packages. Ship the English, Chinese and Japanese README files together.
+
+The release remains a draft until final real-host validation is available. Healthy-path CPU reduction and universal WAN speedups are not claimed. Existing stable installers and container aliases stay on the previous published release while this candidate is held.
+
+See `docs/release-validation-v0.7.0-quic.3.md`.
+
 ## v0.7.0-quic.2 (2026-09-23)
 
 - Use the requested quic.N release naming; keep old unpublished h3.N tags only as immutable history.

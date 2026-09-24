@@ -88,7 +88,7 @@ def main() -> None:
             record['files'][probe.name] = hashlib.sha256(probe.read_bytes()).hexdigest()
         if a.test_only:
             continue
-        docs = ['LICENSE', 'README.md', 'INSTALL.md', 'SECURITY.md', 'THIRD_PARTY_NOTICES.md']
+        docs = ['LICENSE', 'README.md', 'README.zh-CN.md', 'README.ja.md', 'INSTALL.md', 'SECURITY.md', 'THIRD_PARTY_NOTICES.md']
         validation = 'docs/release-validation-'+a.version+'.md'
         if (root/validation).is_file():
             docs.append(validation)

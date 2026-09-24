@@ -8,6 +8,8 @@ Tailcat-QUIC 保留 Tailcat 无账号、无控制服务器的点对点使用方�
 
 **当前版本：[v0.7.0-quic.2](https://github.com/LiuTangLei/tailcat-quic/releases/tag/v0.7.0-quic.2)**
 
+此分支正在准备 **v0.7.0-quic.3**，已固定公共 QUIC 0.63 恢复修复并包含经过认证的浏览器传输。最终真实节点验证尚缺，版本保留为发布草稿；下方稳定安装命令仍选择已发布版本。详见[候选验证记录](docs/release-validation-v0.7.0-quic.3.md)。
+
 > 两端都必须使用本分支。`tch3…` 地址与官方 Tailcat 的 WireGuard `tc…` 地址不兼容。
 
 ## 为什么做这个分支

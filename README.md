@@ -8,6 +8,8 @@ Tailcat-QUIC keeps Tailcat's account-free, control-plane-free peer-to-peer model
 
 **Current release: [v0.7.0-quic.2](https://github.com/LiuTangLei/tailcat-quic/releases/tag/v0.7.0-quic.2)**
 
+This checkout prepares **v0.7.0-quic.3**, using the public QUIC 0.63 recovery fixes and authenticated browser transport. It is held as a release draft pending final real-host validation; stable installation commands below still select the published version. See [candidate validation](docs/release-validation-v0.7.0-quic.3.md).
+
 > Both peers must run this fork. `tch3…` addresses are intentionally incompatible with upstream Tailcat's WireGuard `tc…` addresses.
 
 ## Why this fork

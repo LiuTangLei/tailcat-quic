@@ -86,7 +86,7 @@ def verify(assets, tag, revision):
         if output != tag:
             raise ValueError("packaged executable has the wrong version: " + output)
         info = run(["go", "version", "-m", str(executable)], capture_output=True).stdout
-        for marker in ["github.com/LiuTangLei/quic-go\tv0.63.0-quic.2",
+        for marker in ["github.com/LiuTangLei/quic-go\tv0.63.0-quic.3",
                        "github.com/LiuTangLei/tailscale\tv1.102.5-0.20260923003659-b4f1aa3cd300",
                        "github.com/LiuTangLei/wireguard-go\tv0.0.33-0.20260910045057-ed22747d204e",
                        "vcs.revision=" + revision, "vcs.modified=false"]:
@@ -97,6 +97,7 @@ def verify(assets, tag, revision):
         print("Verified native package:", system, arch, output, revision, flush=True)
         env = os.environ.copy()
         env["GOWORK"] = "off"
+        env["TS_DISABLE_PORTMAPPER"] = "true"
         env["TAILCAT_TEST_BINARY"] = str(executable)
         run(["go", "test", "-count=1", "-timeout=5m", "./cmd/tailcat"], env=env, timeout=360)
         print("Packaged CLI end-to-end tests passed", flush=True)
@@ -107,10 +108,11 @@ def main():
     parser.add_argument("--tag", required=True)
     parser.add_argument("--repo", default="LiuTangLei/tailcat-quic")
     parser.add_argument("--assets", type=Path, help="verify an existing download instead of downloading")
+    parser.add_argument("--revision", help="exact source commit used to build the executable")
     args = parser.parse_args()
     if not re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?", args.tag):
         parser.error("unexpected release tag")
-    revision = run(["git", "rev-parse", "HEAD"], capture_output=True).stdout.strip()
+    revision = run(["git", "rev-parse", "--verify", (args.revision or "HEAD") + "^{commit}"], capture_output=True).stdout.strip()
     if args.assets:
         verify(args.assets.resolve(), args.tag, revision)
     else:

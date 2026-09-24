@@ -4,7 +4,7 @@ tailcat-quic retains the original tailcat and Tailscale BSD-3-Clause copyright a
 
 ## quic-go
 
-Source: https://github.com/LiuTangLei/quic-go/tree/v0.63.0-quic.2 (fork of https://github.com/quic-go/quic-go).
+Source: https://github.com/LiuTangLei/quic-go/tree/v0.63.0-quic.3 (fork of https://github.com/quic-go/quic-go).
 
 MIT License
 
