@@ -1,0 +1,3086 @@
+{
+  "date": "2026-09-27",
+  "scope": "official Tailcat userspace WireGuard vs Tailcat-QUIC; not kernel WireGuard or an isolated protocol-only comparison",
+  "seconds_per_sample": 20,
+  "omitted_warmup_seconds": 2,
+  "order": [
+    "wg-1",
+    "h3-1",
+    "h3-2",
+    "wg-2"
+  ],
+  "threshold_mbps": 500,
+  "receiver_rates": true,
+  "runtime_source_hashes_match_prior_validation": {
+    "web/main_js.go": "27944df44036ec7d4761fda02f4964cb12a90317e76c0bb5595c4e6f0ed6439e",
+    "web/bridge_js.go": "d5f83da0cae1ecd471e96d71b5b418a875474ae10b50f86af9d49d9456a2f908",
+    "web/bridge_js_test.go": "a27180c3b6a7d7e058a0747e80f94c24eedf40e5dcb2c6bff17e4bf8a250fe7c",
+    "web/app.js": "92134b8b1c03f4b7ddd3d917a7802d0b0693398f97c60ba13ddc45c34d35a4bc",
+    "web/send_cleanup_test.mjs": "51cc3a0121465c196d1a245aef933f413199bb5ab05b09e654b7f084132d8a9c",
+    "web/lifecycle_test.go": "626934a641a1b80d8aeda1786865ae7b4f640de7a75b2f1c0901056b414428f2",
+    "go.mod": "80662b4d182e1dd20215cfe793a6c808dff22027766eb66d60bf501f0cf1bc16",
+    "go.sum": "33eab96ca6a5d2bf4b6a8f352f1decec16e4624f5928ff15d8bb5987b660de00",
+    "build-tags.txt": "d2df5fdfe031b9c54f498468d6d401b843bfc654e6110d6291c51dae7d33d678"
+  },
+  "package_build": {
+    "source": "bf44335b5cc98aba21b1732246835d19a9d35866",
+    "source_dirty": false,
+    "version": "v0.7.0-quic.4",
+    "test_only": false,
+    "toolchain": "go version go1.27.1 linux/amd64",
+    "modules": {
+      "tailscale.com": {
+        "Path": "github.com/LiuTangLei/tailscale",
+        "Version": "v1.102.5-0.20260923003659-b4f1aa3cd300",
+        "Sum": "h1:i/caN4lx/me9Bow8loqBzJ6s7B+iebFGYMNAb+cwJ2w="
+      },
+      "github.com/quic-go/quic-go": {
+        "Path": "github.com/LiuTangLei/quic-go",
+        "Version": "v0.63.0-quic.3",
+        "Sum": "h1:fxQbjBZWDXYxrdcB782e/QUmUhBL8bsbbuT9FtqTMAs="
+      },
+      "github.com/LiuTangLei/wireguard-go": {
+        "Path": "github.com/LiuTangLei/wireguard-go",
+        "Version": "v0.0.33-0.20260910045057-ed22747d204e",
+        "Sum": "h1:mGieoLdA0boJaY0o4PFAgPDfkRaBinKygczxKIHJ1hs="
+      }
+    },
+    "files": {
+      "tailcat-linux-amd64": "62fa9c39c775a4c9ba75ade0a31466f2db73e8711cb0c66ea753fa62237f3cab",
+      "tailcat-linux-arm64": "4102b413a247c27178ad4ef010c956743fbe20c385cee1d37171362b6a787380",
+      "tailcat-linux-arm": "20b8b3feac37dc7d1d0acb278ad3f6388e97037115f97aeb72f394d669d22f1f",
+      "tailcat-darwin-amd64": "a288d65cac7d07d4846ecf8497dd3c3416bc99b1210186222a2db9f02627f7a9",
+      "tailcat-darwin-arm64": "e1737db3811944d7517cc07523412926cb979198d309317544120f1414164907",
+      "tailcat-windows-amd64.exe": "2866d0edccae0f8abd069b39a9df3467d6f2ba52c14eaa43392001ed894d9627",
+      "tailcat-windows-arm64.exe": "a48db36010085fa5ffddb864628b8d95a3cc84d5b8f8b5f4280de6460e0c498d"
+    },
+    "archives": {
+      "tailcat_0.7.0-quic.4_linux_amd64.tar.gz": "8f06d1264e92965a2f4f0810be70bb326101ee822240fc8201bef89390c57663",
+      "tailcat_0.7.0-quic.4_linux_arm64.tar.gz": "72822e8c08d1cc4bf95a7969f8fd471df3078821ae8d9ac7cc5c2fde521d8211",
+      "tailcat_0.7.0-quic.4_linux_armv7.tar.gz": "8794e2c124451e4056eb954931f9e904526ffbea308c41ef00bac75803c41d77",
+      "tailcat_0.7.0-quic.4_darwin_amd64.tar.gz": "9e1b3b6ae6b11e0f95a92c4c586a3c236b33164672ba8c57572dd52a968c4c67",
+      "tailcat_0.7.0-quic.4_darwin_arm64.tar.gz": "0a8f2a217e01495c209618399951e60e50b6a76bedd0206115a01888443221bd",
+      "tailcat_0.7.0-quic.4_windows_amd64.zip": "a1eee974ecd51f7f03d732ab754763ebbbeed2893136c7bb9cb7835abfd9cb48",
+      "tailcat_0.7.0-quic.4_windows_arm64.zip": "1857d6685ef8b4e12086bb581b89c4271a8a038e0c789f8a5f3a4174f1839b9d",
+      "tailcat-quic_0.7.0-quic.4_amd64.deb": "863e9c3d52fc897626360b5e4b458b28c15eec8d3a90a5929a70f6c08b46ee12",
+      "tailcat-quic_0.7.0-quic.4_amd64.rpm": "42b80f11283080c7cb102a695c2acab5b1071620a8ffab3baefa52d229c1dba4",
+      "tailcat-quic_0.7.0-quic.4_arm64.deb": "aaa4834c43e79f6ed7649c5e520245ac9922f36a23b256f550d47e66be15c0a1",
+      "tailcat-quic_0.7.0-quic.4_arm64.rpm": "eb6372c099623dcc52a9e2577c17d741e461022a2cd481321c0ad3b71f974785",
+      "tailcat-quic_0.7.0-quic.4_arm7.deb": "61dafb5c9f0638508eb507c94500a7237465deb6246a3ac35e8e4de969f33e6b",
+      "tailcat-quic_0.7.0-quic.4_arm7.rpm": "af3671aa79bad91a2cbc66db7f5d1d9afdc72e74ad88ca20512d25e846ec43c9"
+    }
+  },
+  "package_contents": {
+    "source": "bf44335b5cc98aba21b1732246835d19a9d35866",
+    "packages_checked": 13,
+    "results": [
+      {
+        "archive": "tailcat_0.7.0-quic.4_linux_amd64.tar.gz",
+        "binary_sha256": "62fa9c39c775a4c9ba75ade0a31466f2db73e8711cb0c66ea753fa62237f3cab",
+        "build_identity_matches": true
+      },
+      {
+        "archive": "tailcat_0.7.0-quic.4_linux_arm64.tar.gz",
+        "binary_sha256": "4102b413a247c27178ad4ef010c956743fbe20c385cee1d37171362b6a787380",
+        "build_identity_matches": true
+      },
+      {
+        "archive": "tailcat_0.7.0-quic.4_linux_armv7.tar.gz",
+        "binary_sha256": "20b8b3feac37dc7d1d0acb278ad3f6388e97037115f97aeb72f394d669d22f1f",
+        "build_identity_matches": true
+      },
+      {
+        "archive": "tailcat_0.7.0-quic.4_darwin_amd64.tar.gz",
+        "binary_sha256": "a288d65cac7d07d4846ecf8497dd3c3416bc99b1210186222a2db9f02627f7a9",
+        "build_identity_matches": true
+      },
+      {
+        "archive": "tailcat_0.7.0-quic.4_darwin_arm64.tar.gz",
+        "binary_sha256": "e1737db3811944d7517cc07523412926cb979198d309317544120f1414164907",
+        "build_identity_matches": true
+      },
+      {
+        "archive": "tailcat_0.7.0-quic.4_windows_amd64.zip",
+        "binary_sha256": "2866d0edccae0f8abd069b39a9df3467d6f2ba52c14eaa43392001ed894d9627",
+        "build_identity_matches": true
+      },
+      {
+        "archive": "tailcat_0.7.0-quic.4_windows_arm64.zip",
+        "binary_sha256": "a48db36010085fa5ffddb864628b8d95a3cc84d5b8f8b5f4280de6460e0c498d",
+        "build_identity_matches": true
+      },
+      {
+        "archive": "tailcat-quic_0.7.0-quic.4_amd64.deb",
+        "binary_sha256": "62fa9c39c775a4c9ba75ade0a31466f2db73e8711cb0c66ea753fa62237f3cab",
+        "build_identity_matches": true
+      },
+      {
+        "archive": "tailcat-quic_0.7.0-quic.4_amd64.rpm",
+        "binary_sha256": "62fa9c39c775a4c9ba75ade0a31466f2db73e8711cb0c66ea753fa62237f3cab",
+        "build_identity_matches": true
+      },
+      {
+        "archive": "tailcat-quic_0.7.0-quic.4_arm64.deb",
+        "binary_sha256": "4102b413a247c27178ad4ef010c956743fbe20c385cee1d37171362b6a787380",
+        "build_identity_matches": true
+      },
+      {
+        "archive": "tailcat-quic_0.7.0-quic.4_arm64.rpm",
+        "binary_sha256": "4102b413a247c27178ad4ef010c956743fbe20c385cee1d37171362b6a787380",
+        "build_identity_matches": true
+      },
+      {
+        "archive": "tailcat-quic_0.7.0-quic.4_arm7.deb",
+        "binary_sha256": "20b8b3feac37dc7d1d0acb278ad3f6388e97037115f97aeb72f394d669d22f1f",
+        "build_identity_matches": true
+      },
+      {
+        "archive": "tailcat-quic_0.7.0-quic.4_arm7.rpm",
+        "binary_sha256": "20b8b3feac37dc7d1d0acb278ad3f6388e97037115f97aeb72f394d669d22f1f",
+        "build_identity_matches": true
+      }
+    ]
+  },
+  "baseline": {
+    "url": "https://github.com/tailscale/tailcat/releases/download/v0.7.0/tailcat_0.7.0_linux_amd64.tar.gz",
+    "archive_sha256": "23c0b1887a5ec422f0d18a9c52b4f5357815febdaae738a1eb54036d10bd9ee6",
+    "binary_sha256": "75da81231e01f2a52005f26f4eca6df4bce71cb694a42fa467a30e93c3d7a5b9",
+    "build_metadata": "official-tailcat: go1.27.1\n\tpath\tgithub.com/tailscale/tailcat/cmd/tailcat\n\tmod\tgithub.com/tailscale/tailcat\tv0.7.0\t\n\tdep\tgithub.com/anmitsu/go-shlex\tv0.0.0-20200514113438-38f4b401e2be\th1:9AeTilPcZAjCFIImctFaOjnTIavg87rW78vTPkQqLI8=\n\tdep\tgithub.com/axiomhq/hyperloglog\tv0.0.0-20240319100328-84253e514e02\th1:bXAPYSbdYbS5VTy92NIUbeDI1qyggi+JYh5op9IFlcQ=\n\tdep\tgithub.com/coder/websocket\tv1.8.14\th1:9L0p0iKiNOibykf283eHkKUHHrpG7f65OE3BhhO7v9g=\n\tdep\tgithub.com/creack/pty\tv1.1.24\th1:bJrF4RRfyJnbTJqzRLHzcGaZK1NeM5kTC9jGgovnR1s=\n\tdep\tgithub.com/dgryski/go-metro\tv0.0.0-20180109044635-280f6062b5bc\th1:8WFBn63wegobsYAX0YjD+8suexZDga5CctH4CCTx2+8=\n\tdep\tgithub.com/fxamacker/cbor/v2\tv2.9.0\th1:NpKPmjDBgUfBms6tr6JZkTHtfFGcMKsw3eGcmD/sapM=\n\tdep\tgithub.com/gaissmai/bart\tv0.26.1\th1:+w4rnLGNlA2GDVn382Tfe3jOsK5vOr5n4KmigJ9lbTo=\n\tdep\tgithub.com/go-json-experiment/json\tv0.0.0-20260623181947-01eb4420fa68\th1:KZaTBSyshWX3MP5jukJcNSuXDQTO+rNpt0J564dX/eg=\n\tdep\tgithub.com/go4org/hashtriemap\tv0.0.0-20260824042624-45fcf11fca0e\th1:ZpjpNPLAkPzo4kGjruw82H26Dsec83ZmR5iiLfcbuTE=\n\tdep\tgithub.com/godbus/dbus/v5\tv5.2.2\th1:TUR3TgtSVDmjiXOgAAyaZbYmIeP3DPkld3jgKGV8mXQ=\n\tdep\tgithub.com/golang/groupcache\tv0.0.0-20241129210726-2c02b8208cf8\th1:f+oWsMOmNPc8JmEHVZIycC7hBoQxHH9pNKQORJNozsQ=\n\tdep\tgithub.com/google/btree\tv1.1.3\th1:CVpQJjYgC4VbzxeGVHfvZrv1ctoYCAI8vbl07Fcxlyg=\n\tdep\tgithub.com/jsimonetti/rtnetlink\tv1.4.1\th1:JfD4jthWBqZMEffc5RjgmlzpYttAVw1sdnmiNaPO3hE=\n\tdep\tgithub.com/klauspost/compress\tv1.19.1\th1:VsB4HPswih7mmZ8WleSFQ75c/Ui1M4trX5oAsJnhSlk=\n\tdep\tgithub.com/kr/fs\tv0.1.0\th1:Jskdu9ieNAYnjxsi0LbQp1ulIKZV1LAFgK1tWhpZgl8=\n\tdep\tgithub.com/mdlayher/netlink\tv1.7.3-0.20250113171957-fbb4dce95f42\th1:A1Cq6Ysb0GM0tpKMbdCXCIfBclan4oHk1Jb+Hrejirg=\n\tdep\tgithub.com/mdlayher/socket\tv0.5.1\th1:VZaqt6RkGkt2OE9l3GcC6nZkqD3xKeQLyfleW/uBcos=\n\tdep\tgithub.com/peterbourgon/ff/v4\tv4.0.0-beta.1\th1:hV8qRu3V7YfiSMsBSfPfdcznAvPQd3jI5zDddSrDoUc=\n\tdep\tgithub.com/pkg/sftp\tv1.13.6\th1:JFZT4XbOU7l77xGSpOdW+pwIMqP044IyjXX6FGyEKFo=\n\tdep\tgithub.com/safchain/ethtool\tv0.3.0\th1:gimQJpsI6sc1yIqP/y8GYgiXn/NjgvpM0RNoWLVVmP0=\n\tdep\tgithub.com/tailscale/gliderssh\tv0.3.4-0.20260716005906-1a0f895faf28\th1:Azz5ILxxVsHN/KjIu3wkJPAmmtiijucZw4Ax5Ye8n+s=\n\tdep\tgithub.com/tailscale/wireguard-go\tv0.0.0-20260911194433-e3222a3340cd\th1:7l7Aru/QMwjoWvfvnTEiX3gG+ixhN5WAFENxHcA9NlI=\n\tdep\tgithub.com/toqueteos/webbrowser\tv1.2.1\th1:O7IsnnU7XQyJ1nHMRfAktUUJOAZD3aQyUVnxzhWphCg=\n\tdep\tgithub.com/u-root/u-root\tv0.14.0\th1:Ka4T10EEML7dQ5XDvO9c3MBN8z4nuSnGjcd1jmU2ivg=\n\tdep\tgithub.com/x448/float16\tv0.8.4\th1:qLwI1I70+NjRFUR3zs1JPUCgaCXSh3SW62uAKT1mSBM=\n\tdep\tgo4.org/mem\tv0.0.0-20240501181205-ae6ca9944745\th1:Tl++JLUCe4sxGu8cTpDzRLd3tN7US4hOxG5YpKCzkek=\n\tdep\tgo4.org/netipx\tv0.0.0-20260823151212-3075585bcbeb\th1:XBM4hvfwGAttkkiTIFfeigdfcL1xIfdKXqFdgiHGtDs=\n\tdep\tgolang.org/x/crypto\tv0.57.0\th1:3ZVCjf8Ggz7zneR/EHRVx68Ctf+2pmIMP2UFhh9cC6M=\n\tdep\tgolang.org/x/exp\tv0.0.0-20260410095643-746e56fc9e2f\th1:W3F4c+6OLc6H2lb//N1q4WpJkhzJCK5J6kUi1NTVXfM=\n\tdep\tgolang.org/x/net\tv0.59.0\th1:5zfYln+w5XCxwrnMMJPufRgNoXEaGxl0wo5GqPXyues=\n\tdep\tgolang.org/x/sync\tv0.23.0\th1:KameEIfc1IkluZyXWLn39Wd4tURc6GbCiISGiZm2bQk=\n\tdep\tgolang.org/x/sys\tv0.48.0\th1:bbX/i/6MgT9BVLM9RT1thmxL04yeTAhbEz4SyadbXoo=\n\tdep\tgolang.org/x/term\tv0.46.0\th1:3+OXuTbaKDgwk8jTi3aSLHRlmWqHEUDUtxnbFigO4YE=\n\tdep\tgolang.org/x/text\tv0.42.0\th1:JbOZXgfeCPU9gacVtYliJqOhD+zhrEqK4LfdpmlUZqI=\n\tdep\tgolang.org/x/time\tv0.15.0\th1:bbrp8t3bGUeFOx08pvsMYRTCVSMk89u4tKbNOZbp88U=\n\tdep\tgvisor.dev/gvisor\tv0.0.0-20260915211658-a6f909f08a72\th1:EytKYr5WrVs+Aah/0xDO8ZAZZzS/iTEVC8ln4ipDbL0=\n\tdep\ttailscale.com\tv1.103.0-pre.0.20260916030321-a2263542f260\th1:OaZIMrBlm9YUcI6tS5EHCFT1VsayQk2yftUI9LxBV7E=\n\tbuild\t-buildmode=exe\n\tbuild\t-compiler=gc\n\tbuild\t-ldflags=\"-s -w -X main.version=v0.7.0\"\n\tbuild\t-tags=ts_omit_ace,ts_omit_acme,ts_omit_advertiseexitnode,ts_omit_advertiseroutes,ts_omit_appconnectors,ts_omit_aws,ts_omit_bird,ts_omit_cachenetmap,ts_omit_captiveportal,ts_omit_capture,ts_omit_cliconndiag,ts_omit_clientmetrics,ts_omit_clientupdate,ts_omit_cloud,ts_omit_colorable,ts_omit_completion,ts_omit_completion_scripts,ts_omit_conn25,ts_omit_connreject,ts_omit_debug,ts_omit_debugeventbus,ts_omit_debugportmapper,ts_omit_desktop_sessions,ts_omit_dns,ts_omit_dnsresolvecache,ts_omit_doctor,ts_omit_drive,ts_omit_favorites,ts_omit_flashappliance,ts_omit_health,ts_omit_hujsonconf,ts_omit_identityfederation,ts_omit_ipnbus,ts_omit_iptables,ts_omit_kube,ts_omit_linkspeed,ts_omit_linuxdnsfight,ts_omit_listenrawdisco,ts_omit_logtail,ts_omit_netlog,ts_omit_networkmanager,ts_omit_oauthkey,ts_omit_osrouter,ts_omit_outboundproxy,ts_omit_peerapiclient,ts_omit_peerapiserver,ts_omit_portlist,ts_omit_portmapper,ts_omit_posture,ts_omit_qrcodes,ts_omit_relayserver,ts_omit_remoteconfig,ts_omit_resolved,ts_omit_routecheck,ts_omit_runtimemetrics,ts_omit_sdnotify,ts_omit_serve,ts_omit_serviceclientprefs,ts_omit_synology,ts_omit_syslog,ts_omit_syspolicy,ts_omit_systray,ts_omit_taildrop,ts_omit_tailnetlock,ts_omit_tap,ts_omit_tpm,ts_omit_tundevstats,ts_omit_unixsocketidentity,ts_omit_useexitnode,ts_omit_useproxy,ts_omit_usermetrics,ts_omit_useroutes,ts_omit_wakeonlan,ts_omit_webbrowser,ts_omit_webclient\n\tbuild\tCGO_ENABLED=0\n\tbuild\tGOARCH=amd64\n\tbuild\tGOOS=linux\n\tbuild\tGOAMD64=v1\n\tbuild\tvcs=git\n\tbuild\tvcs.revision=15ab9e68bfc6534a61797d7af28cedd42b54a3a5\n\tbuild\tvcs.time=2026-09-18T01:38:03Z\n\tbuild\tvcs.modified=false\n"
+  },
+  "native": {
+    "jp-jp": {
+      "kind": "native-link-baseline",
+      "results": [
+        {
+          "protocol": "tcp",
+          "streams": 1,
+          "direction": "client-to-server",
+          "receiver_mbps": 6164.65,
+          "sender_mbps": 6164.71,
+          "retransmits": 1715
+        },
+        {
+          "protocol": "tcp",
+          "streams": 1,
+          "direction": "server-to-client",
+          "receiver_mbps": 5961.9,
+          "sender_mbps": 5961.87,
+          "retransmits": 477
+        },
+        {
+          "protocol": "tcp",
+          "streams": 4,
+          "direction": "client-to-server",
+          "receiver_mbps": 6261.95,
+          "sender_mbps": 6262,
+          "retransmits": 3181
+        },
+        {
+          "protocol": "tcp",
+          "streams": 4,
+          "direction": "server-to-client",
+          "receiver_mbps": 6365.32,
+          "sender_mbps": 6365.5,
+          "retransmits": 1306
+        },
+        {
+          "protocol": "udp-50m",
+          "streams": 1,
+          "direction": "client-to-server",
+          "receiver_mbps": 49.98,
+          "lost_percent": 0.02879990784029491,
+          "jitter_ms": 0.014054169638532904,
+          "packets": 104167,
+          "lost_packets": 30
+        },
+        {
+          "protocol": "udp-50m",
+          "streams": 1,
+          "direction": "server-to-client",
+          "receiver_mbps": 50,
+          "lost_percent": 0,
+          "jitter_ms": 0.02785237501061843,
+          "packets": 104171,
+          "lost_packets": 0
+        }
+      ]
+    },
+    "jp-epyc": {
+      "kind": "native-link-baseline",
+      "results": [
+        {
+          "protocol": "tcp",
+          "streams": 1,
+          "direction": "client-to-server",
+          "receiver_mbps": 4438.21,
+          "sender_mbps": 4438.04,
+          "retransmits": 331
+        },
+        {
+          "protocol": "tcp",
+          "streams": 1,
+          "direction": "server-to-client",
+          "receiver_mbps": 6218.56,
+          "sender_mbps": 6218.48,
+          "retransmits": 2918
+        },
+        {
+          "protocol": "tcp",
+          "streams": 4,
+          "direction": "client-to-server",
+          "receiver_mbps": 5071.78,
+          "sender_mbps": 5071.9,
+          "retransmits": 1288
+        },
+        {
+          "protocol": "tcp",
+          "streams": 4,
+          "direction": "server-to-client",
+          "receiver_mbps": 7170.2,
+          "sender_mbps": 7170.46,
+          "retransmits": 11961
+        },
+        {
+          "protocol": "udp-50m",
+          "streams": 1,
+          "direction": "client-to-server",
+          "receiver_mbps": 50,
+          "lost_percent": 0,
+          "jitter_ms": 0.02263603855864263,
+          "packets": 104176,
+          "lost_packets": 0
+        },
+        {
+          "protocol": "udp-50m",
+          "streams": 1,
+          "direction": "server-to-client",
+          "receiver_mbps": 49.97,
+          "lost_percent": 0.0652779111068446,
+          "jitter_ms": 0.012185332565357272,
+          "packets": 104167,
+          "lost_packets": 68
+        }
+      ]
+    },
+    "au-us": {
+      "kind": "native-link-baseline",
+      "results": [
+        {
+          "protocol": "tcp",
+          "streams": 1,
+          "direction": "client-to-server",
+          "receiver_mbps": 162.36,
+          "sender_mbps": 162.53,
+          "retransmits": 0
+        },
+        {
+          "protocol": "tcp",
+          "streams": 1,
+          "direction": "server-to-client",
+          "receiver_mbps": 137.12,
+          "sender_mbps": 137.25,
+          "retransmits": 114
+        },
+        {
+          "protocol": "tcp",
+          "streams": 4,
+          "direction": "client-to-server",
+          "receiver_mbps": 466.48,
+          "sender_mbps": 470.82,
+          "retransmits": 3
+        },
+        {
+          "protocol": "tcp",
+          "streams": 4,
+          "direction": "server-to-client",
+          "receiver_mbps": 566.55,
+          "sender_mbps": 566.85,
+          "retransmits": 112
+        },
+        {
+          "protocol": "udp-50m",
+          "streams": 1,
+          "direction": "client-to-server",
+          "receiver_mbps": 50,
+          "lost_percent": 0,
+          "jitter_ms": 0.0404490895786714,
+          "packets": 104166,
+          "lost_packets": 0
+        },
+        {
+          "protocol": "udp-50m",
+          "streams": 1,
+          "direction": "server-to-client",
+          "receiver_mbps": 49.99,
+          "lost_percent": 0.011422588168102422,
+          "jitter_ms": 0.014541775962542684,
+          "packets": 104166,
+          "lost_packets": 12
+        }
+      ]
+    }
+  },
+  "native_epyc_ipv4_udp500": {
+    "kind": "native-link-baseline",
+    "results": [
+      {
+        "protocol": "udp-500m",
+        "streams": 1,
+        "direction": "client-to-server",
+        "receiver_mbps": 292.19,
+        "lost_percent": 41.74180066986443,
+        "jitter_ms": 0.1452427384148322,
+        "packets": 1045521,
+        "lost_packets": 436072
+      },
+      {
+        "protocol": "udp-500m",
+        "streams": 1,
+        "direction": "server-to-client",
+        "receiver_mbps": 262.18,
+        "lost_percent": 0.22630963688171257,
+        "jitter_ms": 0.039894163205013225,
+        "packets": 547455,
+        "lost_packets": 1239
+      }
+    ]
+  },
+  "native_epyc_ipv6": {
+    "kind": "native-link-baseline",
+    "results": [
+      {
+        "protocol": "tcp",
+        "streams": 1,
+        "direction": "client-to-server",
+        "receiver_mbps": 4957.46,
+        "sender_mbps": 4957.34,
+        "retransmits": 962
+      },
+      {
+        "protocol": "tcp",
+        "streams": 1,
+        "direction": "server-to-client",
+        "receiver_mbps": 6214.12,
+        "sender_mbps": 6214.16,
+        "retransmits": 3371
+      },
+      {
+        "protocol": "tcp",
+        "streams": 4,
+        "direction": "client-to-server",
+        "receiver_mbps": 5350.16,
+        "sender_mbps": 5350.67,
+        "retransmits": 2986
+      },
+      {
+        "protocol": "tcp",
+        "streams": 4,
+        "direction": "server-to-client",
+        "receiver_mbps": 7188.99,
+        "sender_mbps": 7189.4,
+        "retransmits": 14062
+      },
+      {
+        "protocol": "udp-500m",
+        "streams": 1,
+        "direction": "client-to-server",
+        "receiver_mbps": 321.66,
+        "lost_percent": 35.77753819060098,
+        "jitter_ms": 0.030453109702484157,
+        "packets": 1043837,
+        "lost_packets": 372993
+      },
+      {
+        "protocol": "udp-500m",
+        "streams": 1,
+        "direction": "server-to-client",
+        "receiver_mbps": 260.25,
+        "lost_percent": 0.30756107559972573,
+        "jitter_ms": 0.04735351726560393,
+        "packets": 543861,
+        "lost_packets": 1673
+      }
+    ]
+  },
+  "native_udp500_note": "500M is the requested iperf UDP pacing rate, not proof that the sender achieved 500 Mbps. Receiver rate and loss are retained; these are not tunnel UDP tests or a physical link ceiling.",
+  "runs": [
+    {
+      "name": "jp-jp-wg-1",
+      "path": "direct-udp",
+      "iperf": [
+        {
+          "direction": "client-to-server",
+          "streams": 1,
+          "seconds": 22.11,
+          "measured_seconds": 20,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 440.27,
+          "sender_mbps": 440.49,
+          "inner_tcp_retransmits": 0,
+          "loaded_rtt": {
+            "samples": 196,
+            "min_ms": 1.92,
+            "median_ms": 12.38,
+            "p95_ms": 24.02,
+            "max_ms": 38.64,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "server-to-client",
+          "streams": 1,
+          "seconds": 22.11,
+          "measured_seconds": 20,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 406.7,
+          "sender_mbps": 406.52,
+          "inner_tcp_retransmits": 0,
+          "loaded_rtt": {
+            "samples": 196,
+            "min_ms": 3.06,
+            "median_ms": 11.85,
+            "p95_ms": 21.73,
+            "max_ms": 34.03,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "client-to-server",
+          "streams": 4,
+          "seconds": 22.2,
+          "measured_seconds": 20,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 470.66,
+          "sender_mbps": 471.06,
+          "inner_tcp_retransmits": 0,
+          "loaded_rtt": {
+            "samples": 177,
+            "min_ms": 5.89,
+            "median_ms": 24.7,
+            "p95_ms": 43.13,
+            "max_ms": 90.38,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "server-to-client",
+          "streams": 4,
+          "seconds": 22.19,
+          "measured_seconds": 20,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 420.85,
+          "sender_mbps": 421.06,
+          "inner_tcp_retransmits": 0,
+          "loaded_rtt": {
+            "samples": 181,
+            "min_ms": 3.81,
+            "median_ms": 22.91,
+            "p95_ms": 33.25,
+            "max_ms": 43.53,
+            "errors": 0
+          }
+        }
+      ],
+      "integrity": [
+        {
+          "direction": "server-to-client",
+          "bytes": 1024,
+          "seconds": 0.797,
+          "mbps": 0.01,
+          "sha256_ok": true
+        },
+        {
+          "direction": "client-to-server",
+          "bytes": 16777216,
+          "seconds": 0.583,
+          "mbps": 230.29,
+          "sha256_ok": true
+        },
+        {
+          "direction": "server-to-client",
+          "bytes": 16777216,
+          "seconds": 0.621,
+          "mbps": 216.18,
+          "sha256_ok": true
+        }
+      ],
+      "cold_ready_seconds": 0.797,
+      "idle_rtt": {
+        "samples": 20,
+        "min_ms": 1.59,
+        "median_ms": 1.98,
+        "p95_ms": 3.68,
+        "max_ms": 3.68,
+        "errors": 0
+      },
+      "concurrent_integrity": [
+        {
+          "direction": "client-to-server",
+          "bytes": 2097152,
+          "seconds": 0.195,
+          "mbps": 86.2,
+          "sha256_ok": true
+        },
+        {
+          "direction": "server-to-client",
+          "bytes": 2097152,
+          "seconds": 0.162,
+          "mbps": 103.29,
+          "sha256_ok": true
+        },
+        {
+          "direction": "client-to-server",
+          "bytes": 2097152,
+          "seconds": 0.142,
+          "mbps": 118.26,
+          "sha256_ok": true
+        },
+        {
+          "direction": "server-to-client",
+          "bytes": 2097152,
+          "seconds": 0.089,
+          "mbps": 188.81,
+          "sha256_ok": true
+        }
+      ],
+      "idle_recovery": [
+        {
+          "direction": "client-to-server",
+          "bytes": 262144,
+          "seconds": 0.017,
+          "mbps": 122.39,
+          "sha256_ok": true
+        },
+        {
+          "direction": "server-to-client",
+          "bytes": 262144,
+          "seconds": 0.015,
+          "mbps": 144.39,
+          "sha256_ok": true
+        }
+      ],
+      "udp": {
+        "ok": true,
+        "tested": false
+      },
+      "client_evidence": {
+        "perf_samples": [],
+        "native_h3_no_wg": false,
+        "native_wg": true,
+        "direct_seen": true,
+        "direct_endpoints": [
+          "[redacted public UDP endpoint]",
+          "[redacted public UDP endpoint]"
+        ],
+        "relay_forced": false,
+        "panic_seen": false,
+        "direct_endpoint_families_seen": [
+          "IPv4",
+          "IPv6"
+        ]
+      },
+      "total_sha256_bytes": 42468352,
+      "ok": true,
+      "client_process": {
+        "cpu_peak_percent_one_core": 239.7,
+        "cpu_mean_percent_one_core": 116.3,
+        "peak_rss_mib": 51.8
+      },
+      "server_evidence": {
+        "perf_samples": [],
+        "native_h3_no_wg": false,
+        "native_wg": true,
+        "direct_seen": true,
+        "direct_endpoints": [
+          "[redacted public UDP endpoint]",
+          "[redacted public UDP endpoint]"
+        ],
+        "relay_forced": false,
+        "panic_seen": false,
+        "direct_endpoint_families_seen": [
+          "IPv4",
+          "IPv6"
+        ]
+      },
+      "server_process": {
+        "cpu_peak_percent_one_core": 223.6,
+        "cpu_mean_percent_one_core": 160.5,
+        "peak_rss_mib": 48.5
+      },
+      "binary_sha256": "75da81231e01f2a52005f26f4eca6df4bce71cb694a42fa467a30e93c3d7a5b9",
+      "server_label": "4t-jp",
+      "client_label": "jp1010",
+      "transport": "wg",
+      "cleanup_errors": []
+    },
+    {
+      "name": "jp-jp-wg-2",
+      "path": "direct-udp",
+      "iperf": [
+        {
+          "direction": "client-to-server",
+          "streams": 1,
+          "seconds": 22.19,
+          "measured_seconds": 20,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 449.6,
+          "sender_mbps": 450.98,
+          "inner_tcp_retransmits": 1,
+          "loaded_rtt": {
+            "samples": 192,
+            "min_ms": 1.06,
+            "median_ms": 12.51,
+            "p95_ms": 36.53,
+            "max_ms": 43.41,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "server-to-client",
+          "streams": 1,
+          "seconds": 22.06,
+          "measured_seconds": 20,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 406.65,
+          "sender_mbps": 407.2,
+          "inner_tcp_retransmits": 0,
+          "loaded_rtt": {
+            "samples": 193,
+            "min_ms": 3.64,
+            "median_ms": 14.06,
+            "p95_ms": 22.36,
+            "max_ms": 29.34,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "client-to-server",
+          "streams": 4,
+          "seconds": 22.12,
+          "measured_seconds": 20,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 454.07,
+          "sender_mbps": 454.01,
+          "inner_tcp_retransmits": 0,
+          "loaded_rtt": {
+            "samples": 190,
+            "min_ms": 3.38,
+            "median_ms": 16.41,
+            "p95_ms": 26.93,
+            "max_ms": 29.76,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "server-to-client",
+          "streams": 4,
+          "seconds": 22.16,
+          "measured_seconds": 20,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 417.98,
+          "sender_mbps": 418.6,
+          "inner_tcp_retransmits": 12,
+          "loaded_rtt": {
+            "samples": 190,
+            "min_ms": 3.41,
+            "median_ms": 16.11,
+            "p95_ms": 26.05,
+            "max_ms": 40.44,
+            "errors": 0
+          }
+        }
+      ],
+      "integrity": [
+        {
+          "direction": "server-to-client",
+          "bytes": 1024,
+          "seconds": 0.822,
+          "mbps": 0.01,
+          "sha256_ok": true
+        },
+        {
+          "direction": "client-to-server",
+          "bytes": 16777216,
+          "seconds": 0.558,
+          "mbps": 240.47,
+          "sha256_ok": true
+        },
+        {
+          "direction": "server-to-client",
+          "bytes": 16777216,
+          "seconds": 0.648,
+          "mbps": 207.03,
+          "sha256_ok": true
+        }
+      ],
+      "cold_ready_seconds": 0.822,
+      "idle_rtt": {
+        "samples": 20,
+        "min_ms": 1.62,
+        "median_ms": 2.07,
+        "p95_ms": 4.82,
+        "max_ms": 4.82,
+        "errors": 0
+      },
+      "concurrent_integrity": [
+        {
+          "direction": "client-to-server",
+          "bytes": 2097152,
+          "seconds": 0.192,
+          "mbps": 87.43,
+          "sha256_ok": true
+        },
+        {
+          "direction": "server-to-client",
+          "bytes": 2097152,
+          "seconds": 0.17,
+          "mbps": 98.68,
+          "sha256_ok": true
+        },
+        {
+          "direction": "client-to-server",
+          "bytes": 2097152,
+          "seconds": 0.226,
+          "mbps": 74.39,
+          "sha256_ok": true
+        },
+        {
+          "direction": "server-to-client",
+          "bytes": 2097152,
+          "seconds": 0.225,
+          "mbps": 74.63,
+          "sha256_ok": true
+        }
+      ],
+      "idle_recovery": [
+        {
+          "direction": "client-to-server",
+          "bytes": 262144,
+          "seconds": 0.023,
+          "mbps": 92.53,
+          "sha256_ok": true
+        },
+        {
+          "direction": "server-to-client",
+          "bytes": 262144,
+          "seconds": 0.021,
+          "mbps": 98.65,
+          "sha256_ok": true
+        }
+      ],
+      "udp": {
+        "ok": true,
+        "tested": false
+      },
+      "client_evidence": {
+        "perf_samples": [],
+        "native_h3_no_wg": false,
+        "native_wg": true,
+        "direct_seen": true,
+        "direct_endpoints": [
+          "[redacted public UDP endpoint]",
+          "[redacted public UDP endpoint]"
+        ],
+        "relay_forced": false,
+        "panic_seen": false,
+        "direct_endpoint_families_seen": [
+          "IPv4",
+          "IPv6"
+        ]
+      },
+      "total_sha256_bytes": 42468352,
+      "ok": true,
+      "client_process": {
+        "cpu_peak_percent_one_core": 237.7,
+        "cpu_mean_percent_one_core": 116.4,
+        "peak_rss_mib": 49.5
+      },
+      "server_evidence": {
+        "perf_samples": [],
+        "native_h3_no_wg": false,
+        "native_wg": true,
+        "direct_seen": true,
+        "direct_endpoints": [
+          "[redacted public UDP endpoint]"
+        ],
+        "relay_forced": false,
+        "panic_seen": false,
+        "direct_endpoint_families_seen": [
+          "IPv6"
+        ]
+      },
+      "server_process": {
+        "cpu_peak_percent_one_core": 221.7,
+        "cpu_mean_percent_one_core": 158.9,
+        "peak_rss_mib": 48.3
+      },
+      "binary_sha256": "75da81231e01f2a52005f26f4eca6df4bce71cb694a42fa467a30e93c3d7a5b9",
+      "server_label": "4t-jp",
+      "client_label": "jp1010",
+      "transport": "wg",
+      "cleanup_errors": []
+    },
+    {
+      "name": "jp-jp-h3-1",
+      "path": "direct-udp",
+      "iperf": [
+        {
+          "direction": "client-to-server",
+          "streams": 1,
+          "seconds": 22.11,
+          "measured_seconds": 20,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 447.51,
+          "sender_mbps": 447.58,
+          "inner_tcp_retransmits": 0,
+          "loaded_rtt": {
+            "samples": 208,
+            "min_ms": 1.44,
+            "median_ms": 5.94,
+            "p95_ms": 8.89,
+            "max_ms": 11.15,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "server-to-client",
+          "streams": 1,
+          "seconds": 22.08,
+          "measured_seconds": 20,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 329.62,
+          "sender_mbps": 329.55,
+          "inner_tcp_retransmits": 0,
+          "loaded_rtt": {
+            "samples": 214,
+            "min_ms": 1.26,
+            "median_ms": 2.67,
+            "p95_ms": 5.87,
+            "max_ms": 8.13,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "client-to-server",
+          "streams": 4,
+          "seconds": 22.05,
+          "measured_seconds": 20,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 456.29,
+          "sender_mbps": 456.28,
+          "inner_tcp_retransmits": 1,
+          "loaded_rtt": {
+            "samples": 207,
+            "min_ms": 1.29,
+            "median_ms": 6.31,
+            "p95_ms": 9.55,
+            "max_ms": 35.11,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "server-to-client",
+          "streams": 4,
+          "seconds": 22.03,
+          "measured_seconds": 20,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 330.68,
+          "sender_mbps": 330.4,
+          "inner_tcp_retransmits": 0,
+          "loaded_rtt": {
+            "samples": 213,
+            "min_ms": 1.52,
+            "median_ms": 2.84,
+            "p95_ms": 5.84,
+            "max_ms": 10.58,
+            "errors": 0
+          }
+        }
+      ],
+      "integrity": [
+        {
+          "direction": "server-to-client",
+          "bytes": 1024,
+          "seconds": 0.83,
+          "mbps": 0.01,
+          "sha256_ok": true
+        },
+        {
+          "direction": "client-to-server",
+          "bytes": 16777216,
+          "seconds": 0.395,
+          "mbps": 339.92,
+          "sha256_ok": true
+        },
+        {
+          "direction": "server-to-client",
+          "bytes": 16777216,
+          "seconds": 0.388,
+          "mbps": 345.81,
+          "sha256_ok": true
+        }
+      ],
+      "cold_ready_seconds": 0.83,
+      "idle_rtt": {
+        "samples": 20,
+        "min_ms": 1.75,
+        "median_ms": 2.22,
+        "p95_ms": 3.73,
+        "max_ms": 3.73,
+        "errors": 0
+      },
+      "concurrent_integrity": [
+        {
+          "direction": "client-to-server",
+          "bytes": 2097152,
+          "seconds": 0.136,
+          "mbps": 123.29,
+          "sha256_ok": true
+        },
+        {
+          "direction": "server-to-client",
+          "bytes": 2097152,
+          "seconds": 0.206,
+          "mbps": 81.36,
+          "sha256_ok": true
+        },
+        {
+          "direction": "client-to-server",
+          "bytes": 2097152,
+          "seconds": 0.141,
+          "mbps": 118.98,
+          "sha256_ok": true
+        },
+        {
+          "direction": "server-to-client",
+          "bytes": 2097152,
+          "seconds": 0.205,
+          "mbps": 81.83,
+          "sha256_ok": true
+        }
+      ],
+      "idle_recovery": [
+        {
+          "direction": "client-to-server",
+          "bytes": 262144,
+          "seconds": 0.015,
+          "mbps": 142.49,
+          "sha256_ok": true
+        },
+        {
+          "direction": "server-to-client",
+          "bytes": 262144,
+          "seconds": 0.012,
+          "mbps": 177.88,
+          "sha256_ok": true
+        }
+      ],
+      "udp": {
+        "ok": true,
+        "tested": false
+      },
+      "client_evidence": {
+        "perf_samples": [],
+        "native_h3_no_wg": true,
+        "native_wg": false,
+        "direct_seen": true,
+        "direct_endpoints": [
+          "[redacted public UDP endpoint]",
+          "[redacted public UDP endpoint]"
+        ],
+        "relay_forced": false,
+        "panic_seen": false,
+        "direct_endpoint_families_seen": [
+          "IPv4",
+          "IPv6"
+        ]
+      },
+      "total_sha256_bytes": 42468352,
+      "ok": true,
+      "client_process": {
+        "cpu_peak_percent_one_core": 217.8,
+        "cpu_mean_percent_one_core": 115.4,
+        "peak_rss_mib": 39.8
+      },
+      "server_evidence": {
+        "perf_samples": [],
+        "native_h3_no_wg": true,
+        "native_wg": false,
+        "direct_seen": true,
+        "direct_endpoints": [
+          "[redacted public UDP endpoint]"
+        ],
+        "relay_forced": false,
+        "panic_seen": false,
+        "direct_endpoint_families_seen": [
+          "IPv6"
+        ]
+      },
+      "server_process": {
+        "cpu_peak_percent_one_core": 199.8,
+        "cpu_mean_percent_one_core": 139.4,
+        "peak_rss_mib": 38.2
+      },
+      "binary_sha256": "c8784ae1a95d1cec0cfb81bfc9ccafcc160ee6ca59553fdfa4fdd866b9559320",
+      "server_label": "4t-jp",
+      "client_label": "jp1010",
+      "transport": "h3",
+      "cleanup_errors": []
+    },
+    {
+      "name": "jp-jp-h3-2",
+      "path": "direct-udp",
+      "iperf": [
+        {
+          "direction": "client-to-server",
+          "streams": 1,
+          "seconds": 22.11,
+          "measured_seconds": 20,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 437.23,
+          "sender_mbps": 437.39,
+          "inner_tcp_retransmits": 0,
+          "loaded_rtt": {
+            "samples": 208,
+            "min_ms": 1.08,
+            "median_ms": 6.06,
+            "p95_ms": 8.91,
+            "max_ms": 11.35,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "server-to-client",
+          "streams": 1,
+          "seconds": 22.05,
+          "measured_seconds": 20,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 313.36,
+          "sender_mbps": 313.35,
+          "inner_tcp_retransmits": 2,
+          "loaded_rtt": {
+            "samples": 213,
+            "min_ms": 1.34,
+            "median_ms": 2.94,
+            "p95_ms": 6.49,
+            "max_ms": 17.2,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "client-to-server",
+          "streams": 4,
+          "seconds": 22.05,
+          "measured_seconds": 20,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 446.57,
+          "sender_mbps": 446.66,
+          "inner_tcp_retransmits": 1,
+          "loaded_rtt": {
+            "samples": 206,
+            "min_ms": 1.27,
+            "median_ms": 6.92,
+            "p95_ms": 10.91,
+            "max_ms": 20.37,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "server-to-client",
+          "streams": 4,
+          "seconds": 22.03,
+          "measured_seconds": 20,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 342,
+          "sender_mbps": 341.94,
+          "inner_tcp_retransmits": 0,
+          "loaded_rtt": {
+            "samples": 212,
+            "min_ms": 1.36,
+            "median_ms": 3.34,
+            "p95_ms": 6.98,
+            "max_ms": 9.01,
+            "errors": 0
+          }
+        }
+      ],
+      "integrity": [
+        {
+          "direction": "server-to-client",
+          "bytes": 1024,
+          "seconds": 0.827,
+          "mbps": 0.01,
+          "sha256_ok": true
+        },
+        {
+          "direction": "client-to-server",
+          "bytes": 16777216,
+          "seconds": 0.373,
+          "mbps": 359.92,
+          "sha256_ok": true
+        },
+        {
+          "direction": "server-to-client",
+          "bytes": 16777216,
+          "seconds": 0.442,
+          "mbps": 303.53,
+          "sha256_ok": true
+        }
+      ],
+      "cold_ready_seconds": 0.827,
+      "idle_rtt": {
+        "samples": 20,
+        "min_ms": 1.7,
+        "median_ms": 1.95,
+        "p95_ms": 2.82,
+        "max_ms": 2.82,
+        "errors": 0
+      },
+      "concurrent_integrity": [
+        {
+          "direction": "client-to-server",
+          "bytes": 2097152,
+          "seconds": 0.106,
+          "mbps": 158.27,
+          "sha256_ok": true
+        },
+        {
+          "direction": "server-to-client",
+          "bytes": 2097152,
+          "seconds": 0.159,
+          "mbps": 105.62,
+          "sha256_ok": true
+        },
+        {
+          "direction": "client-to-server",
+          "bytes": 2097152,
+          "seconds": 0.113,
+          "mbps": 148.23,
+          "sha256_ok": true
+        },
+        {
+          "direction": "server-to-client",
+          "bytes": 2097152,
+          "seconds": 0.156,
+          "mbps": 107.51,
+          "sha256_ok": true
+        }
+      ],
+      "idle_recovery": [
+        {
+          "direction": "client-to-server",
+          "bytes": 262144,
+          "seconds": 0.019,
+          "mbps": 109.02,
+          "sha256_ok": true
+        },
+        {
+          "direction": "server-to-client",
+          "bytes": 262144,
+          "seconds": 0.018,
+          "mbps": 116.93,
+          "sha256_ok": true
+        }
+      ],
+      "udp": {
+        "ok": true,
+        "tested": false
+      },
+      "client_evidence": {
+        "perf_samples": [],
+        "native_h3_no_wg": true,
+        "native_wg": false,
+        "direct_seen": true,
+        "direct_endpoints": [
+          "[redacted public UDP endpoint]",
+          "[redacted public UDP endpoint]"
+        ],
+        "relay_forced": false,
+        "panic_seen": false,
+        "direct_endpoint_families_seen": [
+          "IPv4",
+          "IPv6"
+        ]
+      },
+      "total_sha256_bytes": 42468352,
+      "ok": true,
+      "client_process": {
+        "cpu_peak_percent_one_core": 213.7,
+        "cpu_mean_percent_one_core": 112.8,
+        "peak_rss_mib": 39.8
+      },
+      "server_evidence": {
+        "perf_samples": [],
+        "native_h3_no_wg": true,
+        "native_wg": false,
+        "direct_seen": true,
+        "direct_endpoints": [
+          "[redacted public UDP endpoint]"
+        ],
+        "relay_forced": false,
+        "panic_seen": false,
+        "direct_endpoint_families_seen": [
+          "IPv4"
+        ]
+      },
+      "server_process": {
+        "cpu_peak_percent_one_core": 189,
+        "cpu_mean_percent_one_core": 133.5,
+        "peak_rss_mib": 38.8
+      },
+      "binary_sha256": "c8784ae1a95d1cec0cfb81bfc9ccafcc160ee6ca59553fdfa4fdd866b9559320",
+      "server_label": "4t-jp",
+      "client_label": "jp1010",
+      "transport": "h3",
+      "cleanup_errors": []
+    },
+    {
+      "name": "jp-epyc-wg-1",
+      "path": "direct-udp",
+      "iperf": [
+        {
+          "direction": "client-to-server",
+          "streams": 1,
+          "seconds": 22.13,
+          "measured_seconds": 20,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 256.67,
+          "sender_mbps": 256.7,
+          "inner_tcp_retransmits": 0,
+          "loaded_rtt": {
+            "samples": 203,
+            "min_ms": 1.62,
+            "median_ms": 9.03,
+            "p95_ms": 12.68,
+            "max_ms": 39.59,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "server-to-client",
+          "streams": 1,
+          "seconds": 22.06,
+          "measured_seconds": 20,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 515.04,
+          "sender_mbps": 515.67,
+          "inner_tcp_retransmits": 4,
+          "loaded_rtt": {
+            "samples": 200,
+            "min_ms": 1.34,
+            "median_ms": 10.56,
+            "p95_ms": 15.29,
+            "max_ms": 20.66,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "client-to-server",
+          "streams": 4,
+          "seconds": 22.14,
+          "measured_seconds": 20,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 262.26,
+          "sender_mbps": 262.44,
+          "inner_tcp_retransmits": 0,
+          "loaded_rtt": {
+            "samples": 193,
+            "min_ms": 2.27,
+            "median_ms": 14.71,
+            "p95_ms": 19.44,
+            "max_ms": 52.62,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "server-to-client",
+          "streams": 4,
+          "seconds": 22.1,
+          "measured_seconds": 20,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 476.93,
+          "sender_mbps": 477.44,
+          "inner_tcp_retransmits": 6,
+          "loaded_rtt": {
+            "samples": 188,
+            "min_ms": 2.93,
+            "median_ms": 16.18,
+            "p95_ms": 28.33,
+            "max_ms": 70.36,
+            "errors": 0
+          }
+        }
+      ],
+      "integrity": [
+        {
+          "direction": "server-to-client",
+          "bytes": 1024,
+          "seconds": 0.813,
+          "mbps": 0.01,
+          "sha256_ok": true
+        },
+        {
+          "direction": "client-to-server",
+          "bytes": 16777216,
+          "seconds": 0.559,
+          "mbps": 240.02,
+          "sha256_ok": true
+        },
+        {
+          "direction": "server-to-client",
+          "bytes": 16777216,
+          "seconds": 0.338,
+          "mbps": 397.41,
+          "sha256_ok": true
+        }
+      ],
+      "cold_ready_seconds": 0.813,
+      "idle_rtt": {
+        "samples": 20,
+        "min_ms": 1.3,
+        "median_ms": 1.61,
+        "p95_ms": 3.65,
+        "max_ms": 3.65,
+        "errors": 0
+      },
+      "concurrent_integrity": [
+        {
+          "direction": "client-to-server",
+          "bytes": 2097152,
+          "seconds": 0.269,
+          "mbps": 62.46,
+          "sha256_ok": true
+        },
+        {
+          "direction": "server-to-client",
+          "bytes": 2097152,
+          "seconds": 0.047,
+          "mbps": 355.26,
+          "sha256_ok": true
+        },
+        {
+          "direction": "client-to-server",
+          "bytes": 2097152,
+          "seconds": 0.256,
+          "mbps": 65.66,
+          "sha256_ok": true
+        },
+        {
+          "direction": "server-to-client",
+          "bytes": 2097152,
+          "seconds": 0.098,
+          "mbps": 171.44,
+          "sha256_ok": true
+        }
+      ],
+      "idle_recovery": [
+        {
+          "direction": "client-to-server",
+          "bytes": 262144,
+          "seconds": 0.013,
+          "mbps": 156.59,
+          "sha256_ok": true
+        },
+        {
+          "direction": "server-to-client",
+          "bytes": 262144,
+          "seconds": 0.008,
+          "mbps": 247.03,
+          "sha256_ok": true
+        }
+      ],
+      "udp": {
+        "ok": true,
+        "tested": false
+      },
+      "client_evidence": {
+        "perf_samples": [],
+        "native_h3_no_wg": false,
+        "native_wg": true,
+        "direct_seen": true,
+        "direct_endpoints": [
+          "[redacted public UDP endpoint]",
+          "[redacted public UDP endpoint]"
+        ],
+        "relay_forced": false,
+        "panic_seen": false,
+        "direct_endpoint_families_seen": [
+          "IPv4",
+          "IPv6"
+        ]
+      },
+      "total_sha256_bytes": 42468352,
+      "ok": true,
+      "client_process": {
+        "cpu_peak_percent_one_core": 245.5,
+        "cpu_mean_percent_one_core": 150,
+        "peak_rss_mib": 49.9
+      },
+      "server_evidence": {
+        "perf_samples": [],
+        "native_h3_no_wg": false,
+        "native_wg": true,
+        "direct_seen": true,
+        "direct_endpoints": [
+          "[redacted public UDP endpoint]",
+          "[redacted public UDP endpoint]"
+        ],
+        "relay_forced": false,
+        "panic_seen": false,
+        "direct_endpoint_families_seen": [
+          "IPv4",
+          "IPv6"
+        ]
+      },
+      "server_process": {
+        "cpu_peak_percent_one_core": 229.7,
+        "cpu_mean_percent_one_core": 143.5,
+        "peak_rss_mib": 49.9
+      },
+      "binary_sha256": "75da81231e01f2a52005f26f4eca6df4bce71cb694a42fa467a30e93c3d7a5b9",
+      "server_label": "jp-6c12g",
+      "client_label": "jp1010",
+      "transport": "wg",
+      "cleanup_errors": []
+    },
+    {
+      "name": "jp-epyc-wg-2",
+      "path": "direct-udp",
+      "iperf": [
+        {
+          "direction": "client-to-server",
+          "streams": 1,
+          "seconds": 22.06,
+          "measured_seconds": 20,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 271.66,
+          "sender_mbps": 271.67,
+          "inner_tcp_retransmits": 0,
+          "loaded_rtt": {
+            "samples": 199,
+            "min_ms": 1.79,
+            "median_ms": 11.25,
+            "p95_ms": 15.71,
+            "max_ms": 24.23,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "server-to-client",
+          "streams": 1,
+          "seconds": 22.09,
+          "measured_seconds": 20,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 525.6,
+          "sender_mbps": 525.49,
+          "inner_tcp_retransmits": 3,
+          "loaded_rtt": {
+            "samples": 200,
+            "min_ms": 1.14,
+            "median_ms": 10.44,
+            "p95_ms": 16.33,
+            "max_ms": 21.28,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "client-to-server",
+          "streams": 4,
+          "seconds": 22.13,
+          "measured_seconds": 20,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 262.13,
+          "sender_mbps": 262.25,
+          "inner_tcp_retransmits": 0,
+          "loaded_rtt": {
+            "samples": 197,
+            "min_ms": 2.54,
+            "median_ms": 12.09,
+            "p95_ms": 19.67,
+            "max_ms": 21.71,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "server-to-client",
+          "streams": 4,
+          "seconds": 22.16,
+          "measured_seconds": 20,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 478.54,
+          "sender_mbps": 478.92,
+          "inner_tcp_retransmits": 8,
+          "loaded_rtt": {
+            "samples": 190,
+            "min_ms": 3.03,
+            "median_ms": 15.91,
+            "p95_ms": 27.72,
+            "max_ms": 35.65,
+            "errors": 0
+          }
+        }
+      ],
+      "integrity": [
+        {
+          "direction": "server-to-client",
+          "bytes": 1024,
+          "seconds": 0.772,
+          "mbps": 0.01,
+          "sha256_ok": true
+        },
+        {
+          "direction": "client-to-server",
+          "bytes": 16777216,
+          "seconds": 0.542,
+          "mbps": 247.62,
+          "sha256_ok": true
+        },
+        {
+          "direction": "server-to-client",
+          "bytes": 16777216,
+          "seconds": 0.357,
+          "mbps": 376.1,
+          "sha256_ok": true
+        }
+      ],
+      "cold_ready_seconds": 0.772,
+      "idle_rtt": {
+        "samples": 20,
+        "min_ms": 1.47,
+        "median_ms": 1.62,
+        "p95_ms": 3.2,
+        "max_ms": 3.2,
+        "errors": 0
+      },
+      "concurrent_integrity": [
+        {
+          "direction": "client-to-server",
+          "bytes": 2097152,
+          "seconds": 0.162,
+          "mbps": 103.48,
+          "sha256_ok": true
+        },
+        {
+          "direction": "server-to-client",
+          "bytes": 2097152,
+          "seconds": 0.048,
+          "mbps": 349.21,
+          "sha256_ok": true
+        },
+        {
+          "direction": "client-to-server",
+          "bytes": 2097152,
+          "seconds": 0.163,
+          "mbps": 102.91,
+          "sha256_ok": true
+        },
+        {
+          "direction": "server-to-client",
+          "bytes": 2097152,
+          "seconds": 0.133,
+          "mbps": 126.19,
+          "sha256_ok": true
+        }
+      ],
+      "idle_recovery": [
+        {
+          "direction": "client-to-server",
+          "bytes": 262144,
+          "seconds": 0.016,
+          "mbps": 127.58,
+          "sha256_ok": true
+        },
+        {
+          "direction": "server-to-client",
+          "bytes": 262144,
+          "seconds": 0.012,
+          "mbps": 177.62,
+          "sha256_ok": true
+        }
+      ],
+      "udp": {
+        "ok": true,
+        "tested": false
+      },
+      "client_evidence": {
+        "perf_samples": [],
+        "native_h3_no_wg": false,
+        "native_wg": true,
+        "direct_seen": true,
+        "direct_endpoints": [
+          "[redacted public UDP endpoint]",
+          "[redacted public UDP endpoint]"
+        ],
+        "relay_forced": false,
+        "panic_seen": false,
+        "direct_endpoint_families_seen": [
+          "IPv4",
+          "IPv6"
+        ]
+      },
+      "total_sha256_bytes": 42468352,
+      "ok": true,
+      "client_process": {
+        "cpu_peak_percent_one_core": 247.8,
+        "cpu_mean_percent_one_core": 150.7,
+        "peak_rss_mib": 47.3
+      },
+      "server_evidence": {
+        "perf_samples": [],
+        "native_h3_no_wg": false,
+        "native_wg": true,
+        "direct_seen": true,
+        "direct_endpoints": [
+          "[redacted public UDP endpoint]",
+          "[redacted public UDP endpoint]"
+        ],
+        "relay_forced": false,
+        "panic_seen": false,
+        "direct_endpoint_families_seen": [
+          "IPv4",
+          "IPv6"
+        ]
+      },
+      "server_process": {
+        "cpu_peak_percent_one_core": 223.8,
+        "cpu_mean_percent_one_core": 138.3,
+        "peak_rss_mib": 51.4
+      },
+      "binary_sha256": "75da81231e01f2a52005f26f4eca6df4bce71cb694a42fa467a30e93c3d7a5b9",
+      "server_label": "jp-6c12g",
+      "client_label": "jp1010",
+      "transport": "wg",
+      "cleanup_errors": []
+    },
+    {
+      "name": "jp-epyc-h3-1",
+      "path": "direct-udp",
+      "iperf": [
+        {
+          "direction": "client-to-server",
+          "streams": 1,
+          "seconds": 22.07,
+          "measured_seconds": 20,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 243.54,
+          "sender_mbps": 243.58,
+          "inner_tcp_retransmits": 0,
+          "loaded_rtt": {
+            "samples": 213,
+            "min_ms": 0.84,
+            "median_ms": 3.49,
+            "p95_ms": 4.61,
+            "max_ms": 9.01,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "server-to-client",
+          "streams": 1,
+          "seconds": 22.05,
+          "measured_seconds": 20,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 504.42,
+          "sender_mbps": 504.42,
+          "inner_tcp_retransmits": 6,
+          "loaded_rtt": {
+            "samples": 210,
+            "min_ms": 0.92,
+            "median_ms": 4.62,
+            "p95_ms": 8.56,
+            "max_ms": 14.82,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "client-to-server",
+          "streams": 4,
+          "seconds": 22.07,
+          "measured_seconds": 20,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 252.38,
+          "sender_mbps": 252.27,
+          "inner_tcp_retransmits": 1,
+          "loaded_rtt": {
+            "samples": 213,
+            "min_ms": 1.08,
+            "median_ms": 3.27,
+            "p95_ms": 5.15,
+            "max_ms": 11.51,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "server-to-client",
+          "streams": 4,
+          "seconds": 22.04,
+          "measured_seconds": 20,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 556.35,
+          "sender_mbps": 556.49,
+          "inner_tcp_retransmits": 6,
+          "loaded_rtt": {
+            "samples": 213,
+            "min_ms": 1.1,
+            "median_ms": 3.14,
+            "p95_ms": 5.78,
+            "max_ms": 7.51,
+            "errors": 0
+          }
+        }
+      ],
+      "integrity": [
+        {
+          "direction": "server-to-client",
+          "bytes": 1024,
+          "seconds": 0.826,
+          "mbps": 0.01,
+          "sha256_ok": true
+        },
+        {
+          "direction": "client-to-server",
+          "bytes": 16777216,
+          "seconds": 0.555,
+          "mbps": 242.01,
+          "sha256_ok": true
+        },
+        {
+          "direction": "server-to-client",
+          "bytes": 16777216,
+          "seconds": 0.261,
+          "mbps": 514.73,
+          "sha256_ok": true
+        }
+      ],
+      "cold_ready_seconds": 0.826,
+      "idle_rtt": {
+        "samples": 20,
+        "min_ms": 1.49,
+        "median_ms": 1.71,
+        "p95_ms": 3.16,
+        "max_ms": 3.16,
+        "errors": 0
+      },
+      "concurrent_integrity": [
+        {
+          "direction": "client-to-server",
+          "bytes": 2097152,
+          "seconds": 0.156,
+          "mbps": 107.56,
+          "sha256_ok": true
+        },
+        {
+          "direction": "server-to-client",
+          "bytes": 2097152,
+          "seconds": 0.084,
+          "mbps": 200.46,
+          "sha256_ok": true
+        },
+        {
+          "direction": "client-to-server",
+          "bytes": 2097152,
+          "seconds": 0.152,
+          "mbps": 110.09,
+          "sha256_ok": true
+        },
+        {
+          "direction": "server-to-client",
+          "bytes": 2097152,
+          "seconds": 0.085,
+          "mbps": 198.07,
+          "sha256_ok": true
+        }
+      ],
+      "idle_recovery": [
+        {
+          "direction": "client-to-server",
+          "bytes": 262144,
+          "seconds": 0.012,
+          "mbps": 173.18,
+          "sha256_ok": true
+        },
+        {
+          "direction": "server-to-client",
+          "bytes": 262144,
+          "seconds": 0.009,
+          "mbps": 234.65,
+          "sha256_ok": true
+        }
+      ],
+      "udp": {
+        "ok": true,
+        "tested": false
+      },
+      "client_evidence": {
+        "perf_samples": [],
+        "native_h3_no_wg": true,
+        "native_wg": false,
+        "direct_seen": true,
+        "direct_endpoints": [
+          "[redacted public UDP endpoint]",
+          "[redacted public UDP endpoint]"
+        ],
+        "relay_forced": false,
+        "panic_seen": false,
+        "direct_endpoint_families_seen": [
+          "IPv4",
+          "IPv6"
+        ]
+      },
+      "total_sha256_bytes": 42468352,
+      "ok": true,
+      "client_process": {
+        "cpu_peak_percent_one_core": 261.6,
+        "cpu_mean_percent_one_core": 133.2,
+        "peak_rss_mib": 39.7
+      },
+      "server_evidence": {
+        "perf_samples": [],
+        "native_h3_no_wg": true,
+        "native_wg": false,
+        "direct_seen": true,
+        "direct_endpoints": [
+          "[redacted public UDP endpoint]",
+          "[redacted public UDP endpoint]"
+        ],
+        "relay_forced": false,
+        "panic_seen": false,
+        "direct_endpoint_families_seen": [
+          "IPv4",
+          "IPv6"
+        ]
+      },
+      "server_process": {
+        "cpu_peak_percent_one_core": 217.7,
+        "cpu_mean_percent_one_core": 130.1,
+        "peak_rss_mib": 39.9
+      },
+      "binary_sha256": "c8784ae1a95d1cec0cfb81bfc9ccafcc160ee6ca59553fdfa4fdd866b9559320",
+      "server_label": "jp-6c12g",
+      "client_label": "jp1010",
+      "transport": "h3",
+      "cleanup_errors": []
+    },
+    {
+      "name": "jp-epyc-h3-2",
+      "path": "direct-udp",
+      "iperf": [
+        {
+          "direction": "client-to-server",
+          "streams": 1,
+          "seconds": 22.09,
+          "measured_seconds": 20,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 251.62,
+          "sender_mbps": 251.6,
+          "inner_tcp_retransmits": 0,
+          "loaded_rtt": {
+            "samples": 213,
+            "min_ms": 1.01,
+            "median_ms": 3.56,
+            "p95_ms": 4.81,
+            "max_ms": 7.13,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "server-to-client",
+          "streams": 1,
+          "seconds": 22.06,
+          "measured_seconds": 20,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 471.85,
+          "sender_mbps": 471.7,
+          "inner_tcp_retransmits": 6,
+          "loaded_rtt": {
+            "samples": 211,
+            "min_ms": 0.9,
+            "median_ms": 3.84,
+            "p95_ms": 8.67,
+            "max_ms": 13.75,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "client-to-server",
+          "streams": 4,
+          "seconds": 22.08,
+          "measured_seconds": 20,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 253.18,
+          "sender_mbps": 253.22,
+          "inner_tcp_retransmits": 2,
+          "loaded_rtt": {
+            "samples": 213,
+            "min_ms": 1.12,
+            "median_ms": 3.2,
+            "p95_ms": 4.96,
+            "max_ms": 38.1,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "server-to-client",
+          "streams": 4,
+          "seconds": 22.12,
+          "measured_seconds": 20,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 505.77,
+          "sender_mbps": 505.95,
+          "inner_tcp_retransmits": 6,
+          "loaded_rtt": {
+            "samples": 214,
+            "min_ms": 1.05,
+            "median_ms": 2.93,
+            "p95_ms": 5.7,
+            "max_ms": 10.36,
+            "errors": 0
+          }
+        }
+      ],
+      "integrity": [
+        {
+          "direction": "server-to-client",
+          "bytes": 1024,
+          "seconds": 0.814,
+          "mbps": 0.01,
+          "sha256_ok": true
+        },
+        {
+          "direction": "client-to-server",
+          "bytes": 16777216,
+          "seconds": 0.551,
+          "mbps": 243.57,
+          "sha256_ok": true
+        },
+        {
+          "direction": "server-to-client",
+          "bytes": 16777216,
+          "seconds": 0.342,
+          "mbps": 392.12,
+          "sha256_ok": true
+        }
+      ],
+      "cold_ready_seconds": 0.815,
+      "idle_rtt": {
+        "samples": 20,
+        "min_ms": 1.4,
+        "median_ms": 1.61,
+        "p95_ms": 2.9,
+        "max_ms": 2.9,
+        "errors": 0
+      },
+      "concurrent_integrity": [
+        {
+          "direction": "client-to-server",
+          "bytes": 2097152,
+          "seconds": 0.114,
+          "mbps": 146.76,
+          "sha256_ok": true
+        },
+        {
+          "direction": "server-to-client",
+          "bytes": 2097152,
+          "seconds": 0.088,
+          "mbps": 191.65,
+          "sha256_ok": true
+        },
+        {
+          "direction": "client-to-server",
+          "bytes": 2097152,
+          "seconds": 0.114,
+          "mbps": 146.88,
+          "sha256_ok": true
+        },
+        {
+          "direction": "server-to-client",
+          "bytes": 2097152,
+          "seconds": 0.088,
+          "mbps": 191.3,
+          "sha256_ok": true
+        }
+      ],
+      "idle_recovery": [
+        {
+          "direction": "client-to-server",
+          "bytes": 262144,
+          "seconds": 0.013,
+          "mbps": 159.26,
+          "sha256_ok": true
+        },
+        {
+          "direction": "server-to-client",
+          "bytes": 262144,
+          "seconds": 0.008,
+          "mbps": 259.24,
+          "sha256_ok": true
+        }
+      ],
+      "udp": {
+        "ok": true,
+        "tested": false
+      },
+      "client_evidence": {
+        "perf_samples": [],
+        "native_h3_no_wg": true,
+        "native_wg": false,
+        "direct_seen": true,
+        "direct_endpoints": [
+          "[redacted public UDP endpoint]",
+          "[redacted public UDP endpoint]"
+        ],
+        "relay_forced": false,
+        "panic_seen": false,
+        "direct_endpoint_families_seen": [
+          "IPv4",
+          "IPv6"
+        ]
+      },
+      "total_sha256_bytes": 42468352,
+      "ok": true,
+      "client_process": {
+        "cpu_peak_percent_one_core": 255.7,
+        "cpu_mean_percent_one_core": 132.5,
+        "peak_rss_mib": 39.5
+      },
+      "server_evidence": {
+        "perf_samples": [],
+        "native_h3_no_wg": true,
+        "native_wg": false,
+        "direct_seen": true,
+        "direct_endpoints": [
+          "[redacted public UDP endpoint]",
+          "[redacted public UDP endpoint]"
+        ],
+        "relay_forced": false,
+        "panic_seen": false,
+        "direct_endpoint_families_seen": [
+          "IPv4",
+          "IPv6"
+        ]
+      },
+      "server_process": {
+        "cpu_peak_percent_one_core": 223.7,
+        "cpu_mean_percent_one_core": 132.1,
+        "peak_rss_mib": 41.7
+      },
+      "binary_sha256": "c8784ae1a95d1cec0cfb81bfc9ccafcc160ee6ca59553fdfa4fdd866b9559320",
+      "server_label": "jp-6c12g",
+      "client_label": "jp1010",
+      "transport": "h3",
+      "cleanup_errors": []
+    },
+    {
+      "name": "au-us-wg-1",
+      "path": "direct-udp",
+      "iperf": [
+        {
+          "direction": "client-to-server",
+          "streams": 1,
+          "seconds": 23.36,
+          "measured_seconds": 20,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 99.06,
+          "sender_mbps": 99.09,
+          "inner_tcp_retransmits": 18,
+          "loaded_rtt": {
+            "samples": 83,
+            "min_ms": 171.16,
+            "median_ms": 171.93,
+            "p95_ms": 213.82,
+            "max_ms": 342.6,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "server-to-client",
+          "streams": 1,
+          "seconds": 23.37,
+          "measured_seconds": 20,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 69.44,
+          "sender_mbps": 68.13,
+          "inner_tcp_retransmits": 65,
+          "loaded_rtt": {
+            "samples": 85,
+            "min_ms": 170.94,
+            "median_ms": 171.68,
+            "p95_ms": 179.81,
+            "max_ms": 343.5,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "client-to-server",
+          "streams": 4,
+          "seconds": 23.33,
+          "measured_seconds": 20,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 165.9,
+          "sender_mbps": 169.35,
+          "inner_tcp_retransmits": 20,
+          "loaded_rtt": {
+            "samples": 83,
+            "min_ms": 171.01,
+            "median_ms": 172.25,
+            "p95_ms": 242.98,
+            "max_ms": 344.37,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "server-to-client",
+          "streams": 4,
+          "seconds": 23.45,
+          "measured_seconds": 20,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 114,
+          "sender_mbps": 114.89,
+          "inner_tcp_retransmits": 160,
+          "loaded_rtt": {
+            "samples": 82,
+            "min_ms": 170.91,
+            "median_ms": 171.73,
+            "p95_ms": 206.52,
+            "max_ms": 737.19,
+            "errors": 0
+          }
+        }
+      ],
+      "integrity": [
+        {
+          "direction": "server-to-client",
+          "bytes": 1024,
+          "seconds": 1.824,
+          "mbps": 0,
+          "sha256_ok": true
+        },
+        {
+          "direction": "client-to-server",
+          "bytes": 16777216,
+          "seconds": 2.514,
+          "mbps": 53.38,
+          "sha256_ok": true
+        },
+        {
+          "direction": "server-to-client",
+          "bytes": 16777216,
+          "seconds": 7.408,
+          "mbps": 18.12,
+          "sha256_ok": true
+        }
+      ],
+      "cold_ready_seconds": 1.824,
+      "idle_rtt": {
+        "samples": 20,
+        "min_ms": 171.61,
+        "median_ms": 171.87,
+        "p95_ms": 343.61,
+        "max_ms": 343.61,
+        "errors": 0
+      },
+      "concurrent_integrity": [
+        {
+          "direction": "client-to-server",
+          "bytes": 2097152,
+          "seconds": 1.568,
+          "mbps": 10.7,
+          "sha256_ok": true
+        },
+        {
+          "direction": "server-to-client",
+          "bytes": 2097152,
+          "seconds": 1.767,
+          "mbps": 9.5,
+          "sha256_ok": true
+        },
+        {
+          "direction": "client-to-server",
+          "bytes": 2097152,
+          "seconds": 1.768,
+          "mbps": 9.49,
+          "sha256_ok": true
+        },
+        {
+          "direction": "server-to-client",
+          "bytes": 2097152,
+          "seconds": 2.042,
+          "mbps": 8.21,
+          "sha256_ok": true
+        }
+      ],
+      "idle_recovery": [
+        {
+          "direction": "client-to-server",
+          "bytes": 262144,
+          "seconds": 1.035,
+          "mbps": 2.03,
+          "sha256_ok": true
+        },
+        {
+          "direction": "server-to-client",
+          "bytes": 262144,
+          "seconds": 1.034,
+          "mbps": 2.03,
+          "sha256_ok": true
+        }
+      ],
+      "udp": {
+        "ok": true,
+        "tested": false
+      },
+      "client_evidence": {
+        "perf_samples": [],
+        "native_h3_no_wg": false,
+        "native_wg": true,
+        "direct_seen": true,
+        "direct_endpoints": [
+          "[redacted public UDP endpoint]"
+        ],
+        "relay_forced": false,
+        "panic_seen": false,
+        "direct_endpoint_families_seen": [
+          "IPv4"
+        ]
+      },
+      "total_sha256_bytes": 42468352,
+      "ok": true,
+      "client_process": {
+        "cpu_peak_percent_one_core": 83.9,
+        "cpu_mean_percent_one_core": 24.9,
+        "peak_rss_mib": 79.2
+      },
+      "server_evidence": {
+        "perf_samples": [],
+        "native_h3_no_wg": false,
+        "native_wg": true,
+        "direct_seen": true,
+        "direct_endpoints": [
+          "[redacted public UDP endpoint]"
+        ],
+        "relay_forced": false,
+        "panic_seen": false,
+        "direct_endpoint_families_seen": [
+          "IPv4"
+        ]
+      },
+      "server_process": {
+        "cpu_peak_percent_one_core": 192.5,
+        "cpu_mean_percent_one_core": 29.3,
+        "peak_rss_mib": 64.2
+      },
+      "binary_sha256": "75da81231e01f2a52005f26f4eca6df4bce71cb694a42fa467a30e93c3d7a5b9",
+      "server_label": "au9929",
+      "client_label": "us1420",
+      "transport": "wg",
+      "cleanup_errors": []
+    },
+    {
+      "name": "au-us-wg-2",
+      "path": "direct-udp",
+      "iperf": [
+        {
+          "direction": "client-to-server",
+          "streams": 1,
+          "seconds": 23.46,
+          "measured_seconds": 20,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 135.39,
+          "sender_mbps": 134.22,
+          "inner_tcp_retransmits": 27,
+          "loaded_rtt": {
+            "samples": 85,
+            "min_ms": 170.96,
+            "median_ms": 172.03,
+            "p95_ms": 185.92,
+            "max_ms": 343.61,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "server-to-client",
+          "streams": 1,
+          "seconds": 23.3,
+          "measured_seconds": 20,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 19.78,
+          "sender_mbps": 21.36,
+          "inner_tcp_retransmits": 20,
+          "loaded_rtt": {
+            "samples": 83,
+            "min_ms": 171.14,
+            "median_ms": 171.74,
+            "p95_ms": 175.62,
+            "max_ms": 715.92,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "client-to-server",
+          "streams": 4,
+          "seconds": 23.24,
+          "measured_seconds": 20,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 221.52,
+          "sender_mbps": 224.92,
+          "inner_tcp_retransmits": 43,
+          "loaded_rtt": {
+            "samples": 82,
+            "min_ms": 171.02,
+            "median_ms": 173.55,
+            "p95_ms": 218.68,
+            "max_ms": 343.51,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "server-to-client",
+          "streams": 4,
+          "seconds": 23.45,
+          "measured_seconds": 20,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 116.88,
+          "sender_mbps": 119.48,
+          "inner_tcp_retransmits": 157,
+          "loaded_rtt": {
+            "samples": 84,
+            "min_ms": 171,
+            "median_ms": 171.97,
+            "p95_ms": 198.03,
+            "max_ms": 344.08,
+            "errors": 0
+          }
+        }
+      ],
+      "integrity": [
+        {
+          "direction": "server-to-client",
+          "bytes": 1024,
+          "seconds": 1.798,
+          "mbps": 0,
+          "sha256_ok": true
+        },
+        {
+          "direction": "client-to-server",
+          "bytes": 16777216,
+          "seconds": 2.716,
+          "mbps": 49.42,
+          "sha256_ok": true
+        },
+        {
+          "direction": "server-to-client",
+          "bytes": 16777216,
+          "seconds": 6.503,
+          "mbps": 20.64,
+          "sha256_ok": true
+        }
+      ],
+      "cold_ready_seconds": 1.798,
+      "idle_rtt": {
+        "samples": 20,
+        "min_ms": 171.49,
+        "median_ms": 171.7,
+        "p95_ms": 345.33,
+        "max_ms": 345.33,
+        "errors": 0
+      },
+      "concurrent_integrity": [
+        {
+          "direction": "client-to-server",
+          "bytes": 2097152,
+          "seconds": 1.575,
+          "mbps": 10.65,
+          "sha256_ok": true
+        },
+        {
+          "direction": "server-to-client",
+          "bytes": 2097152,
+          "seconds": 2.799,
+          "mbps": 5.99,
+          "sha256_ok": true
+        },
+        {
+          "direction": "client-to-server",
+          "bytes": 2097152,
+          "seconds": 3.13,
+          "mbps": 5.36,
+          "sha256_ok": true
+        },
+        {
+          "direction": "server-to-client",
+          "bytes": 2097152,
+          "seconds": 1.81,
+          "mbps": 9.27,
+          "sha256_ok": true
+        }
+      ],
+      "idle_recovery": [
+        {
+          "direction": "client-to-server",
+          "bytes": 262144,
+          "seconds": 1.033,
+          "mbps": 2.03,
+          "sha256_ok": true
+        },
+        {
+          "direction": "server-to-client",
+          "bytes": 262144,
+          "seconds": 1.034,
+          "mbps": 2.03,
+          "sha256_ok": true
+        }
+      ],
+      "udp": {
+        "ok": true,
+        "tested": false
+      },
+      "client_evidence": {
+        "perf_samples": [],
+        "native_h3_no_wg": false,
+        "native_wg": true,
+        "direct_seen": true,
+        "direct_endpoints": [
+          "[redacted public UDP endpoint]"
+        ],
+        "relay_forced": false,
+        "panic_seen": false,
+        "direct_endpoint_families_seen": [
+          "IPv4"
+        ]
+      },
+      "total_sha256_bytes": 42468352,
+      "ok": true,
+      "client_process": {
+        "cpu_peak_percent_one_core": 97.9,
+        "cpu_mean_percent_one_core": 24.3,
+        "peak_rss_mib": 69
+      },
+      "server_evidence": {
+        "perf_samples": [],
+        "native_h3_no_wg": false,
+        "native_wg": true,
+        "direct_seen": true,
+        "direct_endpoints": [
+          "[redacted public UDP endpoint]"
+        ],
+        "relay_forced": false,
+        "panic_seen": false,
+        "direct_endpoint_families_seen": [
+          "IPv4"
+        ]
+      },
+      "server_process": {
+        "cpu_peak_percent_one_core": 121.9,
+        "cpu_mean_percent_one_core": 31.2,
+        "peak_rss_mib": 59.8
+      },
+      "binary_sha256": "75da81231e01f2a52005f26f4eca6df4bce71cb694a42fa467a30e93c3d7a5b9",
+      "server_label": "au9929",
+      "client_label": "us1420",
+      "transport": "wg",
+      "cleanup_errors": []
+    },
+    {
+      "name": "au-us-h3-1",
+      "path": "direct-udp",
+      "iperf": [
+        {
+          "direction": "client-to-server",
+          "streams": 1,
+          "seconds": 23.33,
+          "measured_seconds": 20,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 269.81,
+          "sender_mbps": 269.48,
+          "inner_tcp_retransmits": 17,
+          "loaded_rtt": {
+            "samples": 75,
+            "min_ms": 171.11,
+            "median_ms": 189.3,
+            "p95_ms": 327.59,
+            "max_ms": 395.67,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "server-to-client",
+          "streams": 1,
+          "seconds": 23.55,
+          "measured_seconds": 20,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 218.33,
+          "sender_mbps": 220.56,
+          "inner_tcp_retransmits": 0,
+          "loaded_rtt": {
+            "samples": 85,
+            "min_ms": 171.17,
+            "median_ms": 173.14,
+            "p95_ms": 188.02,
+            "max_ms": 344.37,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "client-to-server",
+          "streams": 4,
+          "seconds": 23.41,
+          "measured_seconds": 20,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 358.58,
+          "sender_mbps": 359.14,
+          "inner_tcp_retransmits": 7,
+          "loaded_rtt": {
+            "samples": 82,
+            "min_ms": 171.49,
+            "median_ms": 179.78,
+            "p95_ms": 212.63,
+            "max_ms": 343.4,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "server-to-client",
+          "streams": 4,
+          "seconds": 23.36,
+          "measured_seconds": 20,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 239.74,
+          "sender_mbps": 240.1,
+          "inner_tcp_retransmits": 0,
+          "loaded_rtt": {
+            "samples": 84,
+            "min_ms": 171.05,
+            "median_ms": 172.14,
+            "p95_ms": 179.83,
+            "max_ms": 361.38,
+            "errors": 0
+          }
+        }
+      ],
+      "integrity": [
+        {
+          "direction": "server-to-client",
+          "bytes": 1024,
+          "seconds": 2.238,
+          "mbps": 0,
+          "sha256_ok": true
+        },
+        {
+          "direction": "client-to-server",
+          "bytes": 16777216,
+          "seconds": 2.795,
+          "mbps": 48.02,
+          "sha256_ok": true
+        },
+        {
+          "direction": "server-to-client",
+          "bytes": 16777216,
+          "seconds": 2.525,
+          "mbps": 53.15,
+          "sha256_ok": true
+        }
+      ],
+      "cold_ready_seconds": 2.238,
+      "idle_rtt": {
+        "samples": 20,
+        "min_ms": 171.62,
+        "median_ms": 171.82,
+        "p95_ms": 343.92,
+        "max_ms": 343.92,
+        "errors": 0
+      },
+      "concurrent_integrity": [
+        {
+          "direction": "client-to-server",
+          "bytes": 2097152,
+          "seconds": 0.571,
+          "mbps": 29.39,
+          "sha256_ok": true
+        },
+        {
+          "direction": "server-to-client",
+          "bytes": 2097152,
+          "seconds": 0.798,
+          "mbps": 21.03,
+          "sha256_ok": true
+        },
+        {
+          "direction": "client-to-server",
+          "bytes": 2097152,
+          "seconds": 0.584,
+          "mbps": 28.75,
+          "sha256_ok": true
+        },
+        {
+          "direction": "server-to-client",
+          "bytes": 2097152,
+          "seconds": 0.906,
+          "mbps": 18.51,
+          "sha256_ok": true
+        }
+      ],
+      "idle_recovery": [
+        {
+          "direction": "client-to-server",
+          "bytes": 262144,
+          "seconds": 0.35,
+          "mbps": 5.98,
+          "sha256_ok": true
+        },
+        {
+          "direction": "server-to-client",
+          "bytes": 262144,
+          "seconds": 0.351,
+          "mbps": 5.97,
+          "sha256_ok": true
+        }
+      ],
+      "udp": {
+        "ok": true,
+        "tested": false
+      },
+      "client_evidence": {
+        "perf_samples": [],
+        "native_h3_no_wg": true,
+        "native_wg": false,
+        "direct_seen": true,
+        "direct_endpoints": [
+          "[redacted public UDP endpoint]"
+        ],
+        "relay_forced": false,
+        "panic_seen": false,
+        "direct_endpoint_families_seen": [
+          "IPv4"
+        ]
+      },
+      "total_sha256_bytes": 42468352,
+      "ok": true,
+      "client_process": {
+        "cpu_peak_percent_one_core": 69.9,
+        "cpu_mean_percent_one_core": 40.7,
+        "peak_rss_mib": 75.8
+      },
+      "server_evidence": {
+        "perf_samples": [],
+        "native_h3_no_wg": true,
+        "native_wg": false,
+        "direct_seen": true,
+        "direct_endpoints": [
+          "[redacted public UDP endpoint]"
+        ],
+        "relay_forced": false,
+        "panic_seen": false,
+        "direct_endpoint_families_seen": [
+          "IPv4"
+        ]
+      },
+      "server_process": {
+        "cpu_peak_percent_one_core": 119.9,
+        "cpu_mean_percent_one_core": 57.4,
+        "peak_rss_mib": 89.1
+      },
+      "binary_sha256": "c8784ae1a95d1cec0cfb81bfc9ccafcc160ee6ca59553fdfa4fdd866b9559320",
+      "server_label": "au9929",
+      "client_label": "us1420",
+      "transport": "h3",
+      "cleanup_errors": []
+    },
+    {
+      "name": "au-us-h3-2",
+      "path": "direct-udp",
+      "iperf": [
+        {
+          "direction": "client-to-server",
+          "streams": 1,
+          "seconds": 23.26,
+          "measured_seconds": 20,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 300.67,
+          "sender_mbps": 301.47,
+          "inner_tcp_retransmits": 13,
+          "loaded_rtt": {
+            "samples": 79,
+            "min_ms": 171.11,
+            "median_ms": 181.83,
+            "p95_ms": 252.74,
+            "max_ms": 451.08,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "server-to-client",
+          "streams": 1,
+          "seconds": 23.67,
+          "measured_seconds": 20,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 251.66,
+          "sender_mbps": 252.51,
+          "inner_tcp_retransmits": 0,
+          "loaded_rtt": {
+            "samples": 85,
+            "min_ms": 171.12,
+            "median_ms": 172.04,
+            "p95_ms": 191.39,
+            "max_ms": 386.19,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "client-to-server",
+          "streams": 4,
+          "seconds": 23.32,
+          "measured_seconds": 20,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 335.34,
+          "sender_mbps": 332.92,
+          "inner_tcp_retransmits": 9,
+          "loaded_rtt": {
+            "samples": 81,
+            "min_ms": 171.57,
+            "median_ms": 180.24,
+            "p95_ms": 227.6,
+            "max_ms": 343.05,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "server-to-client",
+          "streams": 4,
+          "seconds": 23.22,
+          "measured_seconds": 20,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 253.39,
+          "sender_mbps": 253.75,
+          "inner_tcp_retransmits": 0,
+          "loaded_rtt": {
+            "samples": 84,
+            "min_ms": 171.19,
+            "median_ms": 171.98,
+            "p95_ms": 179.15,
+            "max_ms": 344.61,
+            "errors": 0
+          }
+        }
+      ],
+      "integrity": [
+        {
+          "direction": "server-to-client",
+          "bytes": 1024,
+          "seconds": 2.239,
+          "mbps": 0,
+          "sha256_ok": true
+        },
+        {
+          "direction": "client-to-server",
+          "bytes": 16777216,
+          "seconds": 2.782,
+          "mbps": 48.24,
+          "sha256_ok": true
+        },
+        {
+          "direction": "server-to-client",
+          "bytes": 16777216,
+          "seconds": 2.188,
+          "mbps": 61.35,
+          "sha256_ok": true
+        }
+      ],
+      "cold_ready_seconds": 2.239,
+      "idle_rtt": {
+        "samples": 20,
+        "min_ms": 171.53,
+        "median_ms": 171.76,
+        "p95_ms": 344.06,
+        "max_ms": 344.06,
+        "errors": 0
+      },
+      "concurrent_integrity": [
+        {
+          "direction": "client-to-server",
+          "bytes": 2097152,
+          "seconds": 0.585,
+          "mbps": 28.69,
+          "sha256_ok": true
+        },
+        {
+          "direction": "server-to-client",
+          "bytes": 2097152,
+          "seconds": 0.58,
+          "mbps": 28.93,
+          "sha256_ok": true
+        },
+        {
+          "direction": "client-to-server",
+          "bytes": 2097152,
+          "seconds": 0.571,
+          "mbps": 29.36,
+          "sha256_ok": true
+        },
+        {
+          "direction": "server-to-client",
+          "bytes": 2097152,
+          "seconds": 0.584,
+          "mbps": 28.71,
+          "sha256_ok": true
+        }
+      ],
+      "idle_recovery": [
+        {
+          "direction": "client-to-server",
+          "bytes": 262144,
+          "seconds": 0.352,
+          "mbps": 5.96,
+          "sha256_ok": true
+        },
+        {
+          "direction": "server-to-client",
+          "bytes": 262144,
+          "seconds": 0.351,
+          "mbps": 5.98,
+          "sha256_ok": true
+        }
+      ],
+      "udp": {
+        "ok": true,
+        "tested": false
+      },
+      "client_evidence": {
+        "perf_samples": [],
+        "native_h3_no_wg": true,
+        "native_wg": false,
+        "direct_seen": true,
+        "direct_endpoints": [
+          "[redacted public UDP endpoint]"
+        ],
+        "relay_forced": false,
+        "panic_seen": false,
+        "direct_endpoint_families_seen": [
+          "IPv4"
+        ]
+      },
+      "total_sha256_bytes": 42468352,
+      "ok": true,
+      "client_process": {
+        "cpu_peak_percent_one_core": 77.9,
+        "cpu_mean_percent_one_core": 44.5,
+        "peak_rss_mib": 79.8
+      },
+      "server_evidence": {
+        "perf_samples": [],
+        "native_h3_no_wg": true,
+        "native_wg": false,
+        "direct_seen": true,
+        "direct_endpoints": [
+          "[redacted public UDP endpoint]"
+        ],
+        "relay_forced": false,
+        "panic_seen": false,
+        "direct_endpoint_families_seen": [
+          "IPv4"
+        ]
+      },
+      "server_process": {
+        "cpu_peak_percent_one_core": 121.7,
+        "cpu_mean_percent_one_core": 60.4,
+        "peak_rss_mib": 74.7
+      },
+      "binary_sha256": "c8784ae1a95d1cec0cfb81bfc9ccafcc160ee6ca59553fdfa4fdd866b9559320",
+      "server_label": "au9929",
+      "client_label": "us1420",
+      "transport": "h3",
+      "cleanup_errors": []
+    }
+  ],
+  "comparison": [
+    {
+      "pair": "jp-jp",
+      "direction": "jp1010 → 4t-jp",
+      "streams": 1,
+      "wg": [
+        440.27,
+        449.6
+      ],
+      "h3": [
+        447.51,
+        437.23
+      ],
+      "h3_vs_wg_mean_percent": -0.6,
+      "h3_both_rounds_at_least_500": false
+    },
+    {
+      "pair": "jp-jp",
+      "direction": "4t-jp → jp1010",
+      "streams": 1,
+      "wg": [
+        406.7,
+        406.65
+      ],
+      "h3": [
+        329.62,
+        313.36
+      ],
+      "h3_vs_wg_mean_percent": -20.9,
+      "h3_both_rounds_at_least_500": false
+    },
+    {
+      "pair": "jp-jp",
+      "direction": "jp1010 → 4t-jp",
+      "streams": 4,
+      "wg": [
+        470.66,
+        454.07
+      ],
+      "h3": [
+        456.29,
+        446.57
+      ],
+      "h3_vs_wg_mean_percent": -2.4,
+      "h3_both_rounds_at_least_500": false
+    },
+    {
+      "pair": "jp-jp",
+      "direction": "4t-jp → jp1010",
+      "streams": 4,
+      "wg": [
+        420.85,
+        417.98
+      ],
+      "h3": [
+        330.68,
+        342
+      ],
+      "h3_vs_wg_mean_percent": -19.8,
+      "h3_both_rounds_at_least_500": false
+    },
+    {
+      "pair": "jp-epyc",
+      "direction": "jp1010 → jp-6c12g",
+      "streams": 1,
+      "wg": [
+        256.67,
+        271.66
+      ],
+      "h3": [
+        243.54,
+        251.62
+      ],
+      "h3_vs_wg_mean_percent": -6.3,
+      "h3_both_rounds_at_least_500": false
+    },
+    {
+      "pair": "jp-epyc",
+      "direction": "jp-6c12g → jp1010",
+      "streams": 1,
+      "wg": [
+        515.04,
+        525.6
+      ],
+      "h3": [
+        504.42,
+        471.85
+      ],
+      "h3_vs_wg_mean_percent": -6.2,
+      "h3_both_rounds_at_least_500": false
+    },
+    {
+      "pair": "jp-epyc",
+      "direction": "jp1010 → jp-6c12g",
+      "streams": 4,
+      "wg": [
+        262.26,
+        262.13
+      ],
+      "h3": [
+        252.38,
+        253.18
+      ],
+      "h3_vs_wg_mean_percent": -3.6,
+      "h3_both_rounds_at_least_500": false
+    },
+    {
+      "pair": "jp-epyc",
+      "direction": "jp-6c12g → jp1010",
+      "streams": 4,
+      "wg": [
+        476.93,
+        478.54
+      ],
+      "h3": [
+        556.35,
+        505.77
+      ],
+      "h3_vs_wg_mean_percent": 11.2,
+      "h3_both_rounds_at_least_500": true
+    },
+    {
+      "pair": "au-us",
+      "direction": "us1420 → au9929",
+      "streams": 1,
+      "wg": [
+        99.06,
+        135.39
+      ],
+      "h3": [
+        269.81,
+        300.67
+      ],
+      "h3_vs_wg_mean_percent": 143.3,
+      "h3_both_rounds_at_least_500": false
+    },
+    {
+      "pair": "au-us",
+      "direction": "au9929 → us1420",
+      "streams": 1,
+      "wg": [
+        69.44,
+        19.78
+      ],
+      "h3": [
+        218.33,
+        251.66
+      ],
+      "h3_vs_wg_mean_percent": 426.8,
+      "h3_both_rounds_at_least_500": false
+    },
+    {
+      "pair": "au-us",
+      "direction": "us1420 → au9929",
+      "streams": 4,
+      "wg": [
+        165.9,
+        221.52
+      ],
+      "h3": [
+        358.58,
+        335.34
+      ],
+      "h3_vs_wg_mean_percent": 79.1,
+      "h3_both_rounds_at_least_500": false
+    },
+    {
+      "pair": "au-us",
+      "direction": "au9929 → us1420",
+      "streams": 4,
+      "wg": [
+        114,
+        116.88
+      ],
+      "h3": [
+        239.74,
+        253.39
+      ],
+      "h3_vs_wg_mean_percent": 113.6,
+      "h3_both_rounds_at_least_500": false
+    }
+  ],
+  "total_sha256_bytes": 509620224,
+  "new_tunnel_failures": 0,
+  "published": false,
+  "post_run_cleanup": {
+    "checked_hosts": 5,
+    "test_executables_found": 0,
+    "native_listeners_found": 0,
+    "preexisting_directories_left_intact": 8,
+    "note": "Existing directories dated September 10/23 were left intact; all run-owned cleanup reports are empty."
+  }
+}
