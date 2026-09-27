@@ -19,8 +19,8 @@ import (
 	"strings"
 )
 
-const version = "v0.7.0-quic.2"
-const sourceSum = "h1:torKf2HIsQ3If1/ii+U2hzVhHS0/x2UQ9Tm/+4uP0hg="
+const version = "v0.7.0-quic.4"
+const sourceSum = "h1:RYX6th9t+8fqkhUxO1UDlXokLnBlMTH9r7dr5zTpgRo="
 
 func goOutput(args ...string) (string, error) {
 	cmd := exec.Command("go", args...)
