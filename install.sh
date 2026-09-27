@@ -1,11 +1,11 @@
 #!/bin/sh
 # Install the QUIC fork only. No sudo, service startup, keys or firewall changes.
 # Usage: curl -fsSL .../install.sh | sh
-#        sh install.sh --version v0.7.0-quic.2 --bin-dir /custom/bin
+#        sh install.sh --version v0.7.0-quic.4 --bin-dir /custom/bin
 set -eu
 
 tailcat_install() {
-    version=${TAILCAT_VERSION:-v0.7.0-quic.2}
+    version=${TAILCAT_VERSION:-v0.7.0-quic.4}
     bindir=${TAILCAT_BIN_DIR:-}
     dry_run=false
     while [ "$#" -gt 0 ]; do
@@ -43,7 +43,20 @@ tailcat_install() {
         elif [ "$(id -u)" = 0 ]; then
             bindir=/usr/local/bin
         else
-            bindir=${HOME:?HOME is required}/.local/bin
+            # Prefer a standard writable directory that is already usable by
+            # the calling shell (including Homebrew's prefix on macOS).
+            for candidate_dir in "${HOME:?HOME is required}/.local/bin" /usr/local/bin /opt/homebrew/bin "$HOME/bin"; do
+                case ":${PATH:-}:" in
+                    *":$candidate_dir:"*)
+                        if [ -d "$candidate_dir" ] && [ -w "$candidate_dir" ]; then
+                            bindir=$candidate_dir
+                            break
+                        fi ;;
+                esac
+            done
+            if [ -z "$bindir" ]; then
+                bindir=${HOME:?HOME is required}/.local/bin
+            fi
         fi
     fi
     case "$bindir" in /*) ;; *) echo '--bin-dir must be absolute.' >&2; return 2;; esac

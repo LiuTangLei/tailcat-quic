@@ -2,7 +2,7 @@
 # No elevation, execution-policy changes, services or network settings.
 [CmdletBinding()]
 param(
-    [string]$Version = 'v0.7.0-quic.2',
+    [string]$Version = 'v0.7.0-quic.4',
     [string]$InstallDir = (Join-Path $env:LOCALAPPDATA 'Programs\tailcat-quic'),
     [switch]$NoPath,
     [switch]$DryRun

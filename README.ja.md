@@ -1,110 +1,112 @@
-# tailcat-quic
+# Tailcat-QUIC
 
 [English](README.md) · [简体中文](README.zh-CN.md) · **日本語**
 
-[Tailscale Tailcat v0.7.0](https://github.com/tailscale/tailcat/tree/v0.7.0) をベースにした、独立した QUIC/HTTP/3-only フォークです。
+接続アドレスを共有するだけで、2 台のマシン間でファイル転送、ポート転送、SSH 接続ができます。実行にアカウント、VPN 設定、管理者権限は不要です。直接接続とリレーへの切り替えは自動です。
 
-Tailcat の「アカウント不要・コントロールプレーン不要」の P2P モデルを保ちながら、WireGuard データプレーンを認証済み HTTP/3 + QUIC に置き換えています。TCP サービスは信頼性のある HTTP/3 ストリーム、UDP/IP は QUIC DATAGRAM、QUIC セッションは TLS 1.3、輻輳制御はデフォルトで userspace BBRv3 を使います。
+[Tailcat](https://github.com/tailscale/tailcat) の独立フォークで、認証付き QUIC/HTTP/3 と BBRv3 を使用します。コマンド名は `tailcat` のままで、普段の操作は公式版と同じです。**両端に Tailcat-QUIC が必要です**。本版の `tch3…` アドレスと公式版の `tc…` アドレスには互換性がありません。
 
-**最新リリース: [v0.7.0-quic.2](https://github.com/LiuTangLei/tailcat-quic/releases/tag/v0.7.0-quic.2)**
-
-このブランチは **v0.7.0-quic.3** の準備版です。公開 QUIC 0.63 の復旧修正と認証済みブラウザ通信を含みますが、実ノードでの最終検証が未完了のためリリースはドラフトです。下記の安定版インストール手順は公開済みバージョンを選択します。[検証記録](docs/release-validation-v0.7.0-quic.3.md)を参照してください。
-
-> 両端ともこのフォークを使用してください。`tch3…` アドレスは、公式 Tailcat の WireGuard `tc…` アドレスとは互換性がありません。
+[最新リリース: v0.7.0-quic.4](https://github.com/LiuTangLei/tailcat-quic/releases/tag/v0.7.0-quic.4)
 
 ## インストール
 
-### 最短の方法
-
 Linux / macOS:
 
-~~~sh
+```sh
 curl -fsSL https://raw.githubusercontent.com/LiuTangLei/tailcat-quic/quic-v0.7/install.sh | sh
-~~~
+```
 
 Windows PowerShell:
 
-~~~powershell
+```powershell
 irm https://raw.githubusercontent.com/LiuTangLei/tailcat-quic/quic-v0.7/install.ps1 | iex
-~~~
+```
 
-インストーラは GitHub Release から対象アーカイブを取得し、`checksums.txt` の SHA-256 と `tailcat version` を検証します。サービス起動、ファイアウォール、ルーティング設定の変更は行いません。
-
-### パッケージマネージャ
-
-| 方法 | コマンド |
-| --- | --- |
-| Homebrew | `brew tap LiuTangLei/tailcat-quic https://github.com/LiuTangLei/tailcat-quic.git && brew install LiuTangLei/tailcat-quic/tailcat-quic` |
-| Scoop | `scoop install https://raw.githubusercontent.com/LiuTangLei/tailcat-quic/quic-v0.7/bucket/tailcat-quic.json` |
-| Nix | `nix profile install github:LiuTangLei/tailcat-quic/quic-v0.7#tailcat-quic` |
-| Go | `go run github.com/LiuTangLei/tailcat-quic/install@v0.7.0-quic.2` |
-| Container | `docker run --rm -i ghcr.io/liutanglei/tailcat-quic:latest` |
-
-Linux 向けには amd64/arm64/armv7 の tar.gz・deb・rpm、Windows 向けには amd64/arm64 zip、さらに macOS amd64/arm64 tar.gz を提供します。
-
-このフォークでは、外部パッケージレジストリを一つずつ複製すること自体はサポート目標にしません。上流の prebuilt 対応プラットフォームをすべて維持し、主要なデスクトップ／サーバープラットフォームには検証済みのワンラインインストーラまたは Release パッケージを提供します。詳細は [INSTALL.md](INSTALL.md) を参照してください。
+インストーラは対象プラットフォームを選び、ダウンロードを検証します。アーカイブ、DEB/RPM、Homebrew、Scoop、Nix、コンテナは[インストールガイド](INSTALL.md)を参照してください。
 
 ## クイックスタート
 
-サーバー側:
+### テキストやファイルを送る
 
-~~~sh
+受信側:
+
+```sh
+tailcat > received.txt
+```
+
+表示された完全な `tch3…` アドレスを送信側へ渡します:
+
+```sh
+echo hello | tailcat 'tch3…'
+# ファイルを送る場合:
+tailcat 'tch3…' < document.pdf
+```
+
+次の転送では受信側を再起動します。鍵は自動生成されるため、事前の設定は不要です。アドレスはサービスへのアクセスを許可する情報なので、相手にだけ共有してください。
+
+### ローカルサービスを転送する
+
+サービスが動いているマシン:
+
+```sh
 tailcat serve 8080
-~~~
+```
 
-信頼できる経路で完全な `tch3…` アドレスを相手に渡し、クライアント側で:
+接続するマシン:
 
-~~~sh
+```sh
 tailcat forward 'tch3…' 18080:8080
-# http://127.0.0.1:18080 を開く
-~~~
+```
 
-SSH:
+`http://127.0.0.1:18080` を開きます。Web サービスなら `tailcat browse 'tch3…'` で直接開くこともできます。
 
-~~~sh
+### ファイル名を指定してコピーする
+
+```sh
+# 受信側
+tailcat recv
+
+# 送信側
+tailcat cp document.pdf 'tch3…:'
+```
+
+受信したファイルは現在のディレクトリに一意の名前で保存されます。既存ファイルを共有する場合は `tailcat serve --files=./shared files` を実行します。デフォルトは読み取り専用です。相手は `tailcat ls 'tch3…:'` で一覧を表示し、`tailcat cp 'tch3…:document.pdf' .` で取得できます。
+
+### SSH
+
+既存の SSH 公開鍵を使って許可する場合:
+
+```sh
 tailcat serve --ssh-authorized-keys ~/.ssh/authorized_keys ssh
-tailcat ssh 'tch3…'
-~~~
+```
 
-## 対応プラットフォーム
+相手は `tailcat ssh 'tch3…'` で接続します。既存の SSH サーバーは `tailcat serve 22` で公開できます。
 
-ダウンロード可能なバイナリは公式の prebuilt 対象をすべて含み、macOS も追加しています。
+## その他の操作
 
-- Linux: amd64 / arm64 / armv7
-- Windows: amd64 / arm64
-- macOS: amd64 / arm64
+| 操作 | コマンド |
+| --- | --- |
+| 接続経路を確認 | `tailcat ping 'tch3…'` |
+| 複数ポートを共有 | `tailcat serve 8080,8443` |
+| 接続ごとにコマンドを実行 | `tailcat serve exec -- /path/to/program arg1` |
+| SOCKS 経由でアクセス | `tailcat socks 'tch3…' curl http://server.tailcat:8080/` |
+| 再起動後も同じアドレスを使う | `tailcat genkey --key=default` |
+| ヘルプ | `tailcat --help` または `tailcat <command> --help` |
 
-CLI は FreeBSD/OpenBSD の amd64/arm64 でもクロスビルドできます。Browser/WebAssembly バンドルもソースからビルド可能ですが、ブラウザは relay-only であるため、実ブラウザでの統合確認は別途記録します。
+鍵の保存は任意です。`default` というサーバー鍵を保存すると次回から再利用されます。新しいアドレスには `--key=new` を使います。アクセス制限は[セキュリティ](SECURITY.md)を参照してください。
 
-## 性能
+## 性能と互換性
 
-`v0.7.0-quic.2` は、上限付き 32 KiB H3 読み取りバッファを再利用し、すでに到着済みのデータだけをまとめて読み取ります。大きなバッチを作るための待ち時間は追加しません。
+TCP は信頼性のある QUIC ストリーム、UDP は QUIC DATAGRAM を使用します。暗号化、ノード認証、接続シークレットは自動設定されます。公共リレーには帯域制限がある場合があり、速度は経路とマシンに依存します。
 
-AU / US1420 の A/B では、4 ストリーム平均が一方向で **333.41 → 368.47 Mbps**、逆方向で **211.56 → 305.86 Mbps**。最終 Linux リリースバイナリでは 4 ストリーム双方向 **327.43 / 321.95 Mbps** を確認しました。限られた WAN サンプルであり、すべてのネットワークで同じ改善を保証するものではありません。
+9 月 27 日の公式 Tailcat userspace WireGuard との比較では、日本ノード間の一方向で QUIC の 4 ストリームが **556 / 506 Mbps** でした。単一ストリームや他の経路はこれより遅く、すべての環境で 500 Mbps を保証するものではありません。[全測定結果](docs/wg-quic4-acceptance-20260927.md)。
 
-詳細は [validation report](docs/release-validation-v0.7.0-quic.2.md) を参照してください。
+## 実験的機能
 
-## セキュリティ
+Browser/WebAssembly デモとブラウザ風 TLS フィンガープリントは[実験的機能](docs/experimental.md)にまとめています。通常の CLI 利用に追加設定は不要です。ブラウザ通信は現在リレー経由です。
 
-HTTP/3 は実際のプロトコルフレーミングですが、「すべてのブラウザ通信と完全に識別不能」という保証ではありません。
+## プロジェクト
 
-- TLS 検証、接続シークレット、ノード認証を維持します。
-- `--psk=false` は拒否されます。
-- TCP ストリームは認証済み QUIC セッション上でのみ開かれます。
-- UDP/IP は認証済み CONNECT-IP / QUIC DATAGRAM を使用します。
-- WireGuard/AWG データプレーンへのフォールバックはありません。
+[ソースビルド](INSTALL.md#build-from-source) · [変更履歴](CHANGELOG.md) · [セキュリティ](SECURITY.md) · [開発とリリース](RELEASING.md)
 
-`tch3…` アドレスは資格情報として扱ってください。詳細は [SECURITY.md](SECURITY.md)。
-
-## ソースからビルド
-
-Go 1.27.1 が必要です。
-
-~~~sh
-git clone https://github.com/LiuTangLei/tailcat-quic.git
-cd tailcat-quic
-git checkout quic-v0.7
-go build -trimpath -tags "$(cat build-tags.txt)" -o tailcat ./cmd/tailcat
-~~~
-
-このプロジェクトは独立フォークであり、Tailscale の公式サポート対象ではありません。
+Tailscale の公式サポート対象ではない独立フォークです。[BSD-3-Clause](LICENSE) · [依存ライブラリの表示](THIRD_PARTY_NOTICES.md)。

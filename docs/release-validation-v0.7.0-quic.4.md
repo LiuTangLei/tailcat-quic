@@ -40,6 +40,15 @@ against official Tailcat v0.7.0 using userspace WireGuard. It must preserve both
 directions, single/four streams, repetitions, slower samples and any failures.
 The existing candidate WAN results are not a claim of sustained 500 Mbps.
 
+The September 27 paired comparison and candidate-package checks are complete in
+`docs/wg-quic4-acceptance-20260927.md`. It records 12 successful tunnel runs and
+48 throughput samples. A later documentation refresh simplifies the three READMEs,
+separates experimental features and improves installer destination selection.
+Release packages are rebuilt from that clean revision because the CLI embeds its
+README. The release's accompanying `build.json` and `VALIDATION.md` identify the
+exact final artifacts and their checks; earlier candidate hashes remain historical
+evidence rather than the hashes of the published files.
+
 Windows/Android device execution, Safari/Firefox and multi-hour endurance are
 outside the completed scope. Publication is a separate explicit step; neither a
 clean build nor a successful benchmark publishes a release or changes installers.

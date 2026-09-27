@@ -89,6 +89,8 @@ def main() -> None:
         if a.test_only:
             continue
         docs = ['LICENSE', 'README.md', 'README.zh-CN.md', 'README.ja.md', 'INSTALL.md', 'SECURITY.md', 'THIRD_PARTY_NOTICES.md']
+        docs += ['CHANGELOG.md', 'RELEASING.md', 'docs/manual-release.md',
+                 'docs/experimental.md', 'docs/wg-quic4-acceptance-20260927.md']
         validation = 'docs/release-validation-'+a.version+'.md'
         if (root/validation).is_file():
             docs.append(validation)

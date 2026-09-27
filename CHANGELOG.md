@@ -1,11 +1,13 @@
 # tailcat-quic changelog
 
-## Next QUIC release (unpublished, 2026-09-27)
+## v0.7.0-quic.4 (2026-09-27)
 
 - Release browser Promise executors after invocation so completed writes do not retain their payloads.
 - Reclaim connection/listener callbacks on close and session shutdown, while keeping saved JavaScript methods and repeated close safe.
 - Close browser send connections on file, write, half-close and response errors; preserve the error instead of reporting successful delivery.
 - Add WASM memory/lifecycle, injected failure and repeated real-Chrome transfer regressions. Public transport dependency pins are unchanged.
+- Simplify the English, Chinese and Japanese quick starts; move browser/WASM and TLS fingerprint details to the experimental guide.
+- Prefer an existing writable standard PATH directory for non-root script installs.
 
 See `docs/browser-lifecycle-fix-20260927.md` for exact validation scope and server-test evidence.
 
