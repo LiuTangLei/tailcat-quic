@@ -264,17 +264,20 @@ $("copy-addr").onclick = () => navigator.clipboard.writeText($("listen-addr").te
 async function sendStream(addr, size, readChunk, progressEl) {
   const conn = await tailcatDial({ addr, derpMapURL, verbose });
   let off = 0;
-  while (off < size) {
-    const chunk = await readChunk(off, Math.min(CHUNK, size - off));
-    await conn.write(chunk);
-    off += chunk.length;
-    progressEl.textContent = `${off} / ${size} bytes`;
+  try {
+    while (off < size) {
+      const chunk = await readChunk(off, Math.min(CHUNK, size - off));
+      await conn.write(chunk);
+      off += chunk.length;
+      progressEl.textContent = `${off} / ${size} bytes`;
+    }
+    await conn.closeWrite();
+    // Wait for the receiver's close: like the CLI, the peer's EOF is
+    // the confirmation that everything we sent was delivered.
+    while ((await conn.read()) !== null) {}
+  } finally {
+    conn.close();
   }
-  await conn.closeWrite();
-  // Wait for the receiver's close: like the CLI, the peer's EOF is
-  // the confirmation that everything we sent was delivered.
-  while ((await conn.read()) !== null) {}
-  conn.close();
   window.tcTest.sentBytes = off;
   window.tcTest.sendDone = true;
   progressEl.textContent = `sent ${off} bytes`;

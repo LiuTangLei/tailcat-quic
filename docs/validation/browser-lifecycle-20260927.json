@@ -1,0 +1,1031 @@
+{
+  "date": "2026-09-27",
+  "base_commit": "4ac6137cbce9af2bae62095cd68dc7bc0b44842f",
+  "test_only": true,
+  "source_hashes": {
+    "web/main_js.go": "27944df44036ec7d4761fda02f4964cb12a90317e76c0bb5595c4e6f0ed6439e",
+    "web/bridge_js.go": "d5f83da0cae1ecd471e96d71b5b418a875474ae10b50f86af9d49d9456a2f908",
+    "web/bridge_js_test.go": "a27180c3b6a7d7e058a0747e80f94c24eedf40e5dcb2c6bff17e4bf8a250fe7c",
+    "web/app.js": "92134b8b1c03f4b7ddd3d917a7802d0b0693398f97c60ba13ddc45c34d35a4bc",
+    "web/send_cleanup_test.mjs": "51cc3a0121465c196d1a245aef933f413199bb5ab05b09e654b7f084132d8a9c",
+    "web/lifecycle_test.go": "626934a641a1b80d8aeda1786865ae7b4f640de7a75b2f1c0901056b414428f2",
+    "scripts/host_pair_probe.py": "92398138f920829742754c57d2638469ffa796ba8dea58f964cd118fe44bbae6",
+    "go.mod": "80662b4d182e1dd20215cfe793a6c808dff22027766eb66d60bf501f0cf1bc16",
+    "go.sum": "33eab96ca6a5d2bf4b6a8f352f1decec16e4624f5928ff15d8bb5987b660de00",
+    "build-tags.txt": "d2df5fdfe031b9c54f498468d6d401b843bfc654e6110d6291c51dae7d33d678"
+  },
+  "build": {
+    "source": "4ac6137cbce9af2bae62095cd68dc7bc0b44842f",
+    "source_dirty": true,
+    "version": "v0.7.0-quic.4",
+    "test_only": true,
+    "toolchain": "go version go1.27.1 darwin/arm64",
+    "modules": {
+      "tailscale.com": {
+        "Path": "github.com/LiuTangLei/tailscale",
+        "Version": "v1.102.5-0.20260923003659-b4f1aa3cd300",
+        "Sum": "h1:i/caN4lx/me9Bow8loqBzJ6s7B+iebFGYMNAb+cwJ2w="
+      },
+      "github.com/quic-go/quic-go": {
+        "Path": "github.com/LiuTangLei/quic-go",
+        "Version": "v0.63.0-quic.3",
+        "Sum": "h1:fxQbjBZWDXYxrdcB782e/QUmUhBL8bsbbuT9FtqTMAs="
+      },
+      "github.com/LiuTangLei/wireguard-go": {
+        "Path": "github.com/LiuTangLei/wireguard-go",
+        "Version": "v0.0.33-0.20260910045057-ed22747d204e",
+        "Sum": "h1:mGieoLdA0boJaY0o4PFAgPDfkRaBinKygczxKIHJ1hs="
+      }
+    },
+    "files": {
+      "tailcat-linux-amd64": "c8784ae1a95d1cec0cfb81bfc9ccafcc160ee6ca59553fdfa4fdd866b9559320",
+      "wancheck-linux-amd64": "6fba768f872954841f857d3781787e0b0713c3bcb8eb5faaf2d8c2ffe8635d78",
+      "tailcat-darwin-arm64": "5ba0999d2b31b6075331f2c21eec1a17c40c3c1ea3223e43a74025e0be35d1da"
+    },
+    "archives": {}
+  },
+  "local_checks": {
+    "wasm_bridge": "passed",
+    "javascript_failure_paths": 6,
+    "chrome_cases_linux": 6,
+    "full_linux": "passed on rerun; initial text file busy retained",
+    "race_linux": "passed",
+    "vet_linux": "passed"
+  },
+  "mac_checks": [
+    {
+      "name": "modules",
+      "started": 1790478702.90171,
+      "status": "finished",
+      "returncode": 0,
+      "seconds": 2.72
+    },
+    {
+      "name": "build",
+      "started": 1790478705.61962,
+      "status": "finished",
+      "returncode": 0,
+      "seconds": 13.41
+    },
+    {
+      "name": "mac-native",
+      "started": 1790478719.034536,
+      "status": "finished",
+      "returncode": 0,
+      "seconds": 14.79
+    },
+    {
+      "name": "mac-browser",
+      "started": 1790478733.8223941,
+      "status": "finished",
+      "returncode": 0,
+      "seconds": 16.4
+    },
+    {
+      "name": "js-cleanup",
+      "started": 1790478750.226378,
+      "status": "finished",
+      "returncode": 0,
+      "seconds": 0.18
+    }
+  ],
+  "wan": [
+    {
+      "name": "01-au-us",
+      "ok": true,
+      "path": "direct-udp",
+      "server": "au",
+      "client": "us",
+      "iperf": [
+        {
+          "direction": "client-to-server",
+          "streams": 1,
+          "seconds": 11.44,
+          "measured_seconds": 8,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 277.8,
+          "sender_mbps": 273.95,
+          "inner_tcp_retransmits": 7,
+          "loaded_rtt": {
+            "samples": 39,
+            "min_ms": 171.24,
+            "median_ms": 176.59,
+            "p95_ms": 293.56,
+            "max_ms": 342.8,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "server-to-client",
+          "streams": 1,
+          "seconds": 11.32,
+          "measured_seconds": 8,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 254.3,
+          "sender_mbps": 254.97,
+          "inner_tcp_retransmits": 0,
+          "loaded_rtt": {
+            "samples": 39,
+            "min_ms": 170.95,
+            "median_ms": 172.13,
+            "p95_ms": 351.86,
+            "max_ms": 353.11,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "client-to-server",
+          "streams": 4,
+          "seconds": 11.31,
+          "measured_seconds": 8,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 354.07,
+          "sender_mbps": 347.34,
+          "inner_tcp_retransmits": 9,
+          "loaded_rtt": {
+            "samples": 37,
+            "min_ms": 171.48,
+            "median_ms": 186.94,
+            "p95_ms": 364.17,
+            "max_ms": 427.79,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "server-to-client",
+          "streams": 4,
+          "seconds": 11.42,
+          "measured_seconds": 8,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 284.55,
+          "sender_mbps": 278.44,
+          "inner_tcp_retransmits": 0,
+          "loaded_rtt": {
+            "samples": 41,
+            "min_ms": 171.25,
+            "median_ms": 172.24,
+            "p95_ms": 191.02,
+            "max_ms": 342.54,
+            "errors": 0
+          }
+        }
+      ],
+      "sha256_bytes": 42468352,
+      "udp": {
+        "direct": true,
+        "layer": "UDP Go API, not numeric serve CLI",
+        "lost": 0,
+        "ok": true,
+        "probes": [
+          {
+            "payload_bytes": 64,
+            "sent": 20,
+            "received": 20,
+            "lost": 0,
+            "median_ms": 171.71894,
+            "p95_ms": 172.787711,
+            "max_ms": 172.787711
+          },
+          {
+            "payload_bytes": 512,
+            "sent": 20,
+            "received": 20,
+            "lost": 0,
+            "median_ms": 171.594645,
+            "p95_ms": 172.048185,
+            "max_ms": 172.048185
+          },
+          {
+            "payload_bytes": 1200,
+            "sent": 20,
+            "received": 20,
+            "lost": 0,
+            "median_ms": 171.71852,
+            "p95_ms": 172.094035,
+            "max_ms": 172.094035
+          }
+        ],
+        "received": 60,
+        "sent": 60,
+        "warm_up_seconds": 1.669898516
+      },
+      "server_process": {
+        "cpu_peak_percent_one_core": 125.8,
+        "cpu_mean_percent_one_core": 40.1,
+        "peak_rss_mib": 117.8
+      },
+      "client_process": {
+        "cpu_peak_percent_one_core": 73.9,
+        "cpu_mean_percent_one_core": 29.7,
+        "peak_rss_mib": 75.4
+      },
+      "cleanup_errors": []
+    },
+    {
+      "name": "02-jp-au",
+      "ok": true,
+      "path": "direct-udp",
+      "server": "jp",
+      "client": "au",
+      "iperf": [
+        {
+          "direction": "client-to-server",
+          "streams": 1,
+          "seconds": 10.77,
+          "measured_seconds": 8,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 238.3,
+          "sender_mbps": 238.68,
+          "inner_tcp_retransmits": 0,
+          "loaded_rtt": {
+            "samples": 51,
+            "min_ms": 100,
+            "median_ms": 104.64,
+            "p95_ms": 131.14,
+            "max_ms": 200.7,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "server-to-client",
+          "streams": 1,
+          "seconds": 10.91,
+          "measured_seconds": 8,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 375.93,
+          "sender_mbps": 382.43,
+          "inner_tcp_retransmits": 3,
+          "loaded_rtt": {
+            "samples": 53,
+            "min_ms": 100.18,
+            "median_ms": 103.46,
+            "p95_ms": 111.8,
+            "max_ms": 200.63,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "client-to-server",
+          "streams": 4,
+          "seconds": 10.88,
+          "measured_seconds": 8,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 250.79,
+          "sender_mbps": 250.81,
+          "inner_tcp_retransmits": 0,
+          "loaded_rtt": {
+            "samples": 52,
+            "min_ms": 100.3,
+            "median_ms": 106.5,
+            "p95_ms": 122.89,
+            "max_ms": 200.27,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "server-to-client",
+          "streams": 4,
+          "seconds": 10.9,
+          "measured_seconds": 8,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 391.23,
+          "sender_mbps": 392.19,
+          "inner_tcp_retransmits": 0,
+          "loaded_rtt": {
+            "samples": 53,
+            "min_ms": 100.4,
+            "median_ms": 102.68,
+            "p95_ms": 106.95,
+            "max_ms": 200.53,
+            "errors": 0
+          }
+        }
+      ],
+      "sha256_bytes": 42468352,
+      "udp": {
+        "direct": true,
+        "layer": "UDP Go API, not numeric serve CLI",
+        "lost": 0,
+        "ok": true,
+        "probes": [
+          {
+            "payload_bytes": 64,
+            "sent": 20,
+            "received": 20,
+            "lost": 0,
+            "median_ms": 100.886567,
+            "p95_ms": 101.639245,
+            "max_ms": 101.639245
+          },
+          {
+            "payload_bytes": 512,
+            "sent": 20,
+            "received": 20,
+            "lost": 0,
+            "median_ms": 101.02495,
+            "p95_ms": 101.278978,
+            "max_ms": 101.278978
+          },
+          {
+            "payload_bytes": 1200,
+            "sent": 20,
+            "received": 20,
+            "lost": 0,
+            "median_ms": 100.52261,
+            "p95_ms": 100.760288,
+            "max_ms": 100.760288
+          }
+        ],
+        "received": 60,
+        "sent": 60,
+        "warm_up_seconds": 0.958954323
+      },
+      "server_process": {
+        "cpu_peak_percent_one_core": 201.8,
+        "cpu_mean_percent_one_core": 81.4,
+        "peak_rss_mib": 66.2
+      },
+      "client_process": {
+        "cpu_peak_percent_one_core": 123.9,
+        "cpu_mean_percent_one_core": 56.4,
+        "peak_rss_mib": 70.6
+      },
+      "cleanup_errors": []
+    },
+    {
+      "name": "03-jp-us",
+      "ok": true,
+      "path": "direct-udp",
+      "server": "jp",
+      "client": "us",
+      "iperf": [
+        {
+          "direction": "client-to-server",
+          "streams": 1,
+          "seconds": 10.87,
+          "measured_seconds": 8,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 239.87,
+          "sender_mbps": 238.55,
+          "inner_tcp_retransmits": 1,
+          "loaded_rtt": {
+            "samples": 49,
+            "min_ms": 108.71,
+            "median_ms": 117.03,
+            "p95_ms": 139.69,
+            "max_ms": 217.45,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "server-to-client",
+          "streams": 1,
+          "seconds": 10.96,
+          "measured_seconds": 8,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 334.21,
+          "sender_mbps": 337.66,
+          "inner_tcp_retransmits": 3,
+          "loaded_rtt": {
+            "samples": 49,
+            "min_ms": 108.6,
+            "median_ms": 113.6,
+            "p95_ms": 217.34,
+            "max_ms": 251.91,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "client-to-server",
+          "streams": 4,
+          "seconds": 10.91,
+          "measured_seconds": 8,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 247.22,
+          "sender_mbps": 249.04,
+          "inner_tcp_retransmits": 8,
+          "loaded_rtt": {
+            "samples": 50,
+            "min_ms": 109.07,
+            "median_ms": 113.83,
+            "p95_ms": 135.65,
+            "max_ms": 216.62,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "server-to-client",
+          "streams": 4,
+          "seconds": 10.86,
+          "measured_seconds": 8,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 288.19,
+          "sender_mbps": 286.47,
+          "inner_tcp_retransmits": 1,
+          "loaded_rtt": {
+            "samples": 50,
+            "min_ms": 108.56,
+            "median_ms": 110.11,
+            "p95_ms": 129.76,
+            "max_ms": 245.04,
+            "errors": 0
+          }
+        }
+      ],
+      "sha256_bytes": 42468352,
+      "udp": {
+        "direct": true,
+        "layer": "UDP Go API, not numeric serve CLI",
+        "lost": 0,
+        "ok": true,
+        "probes": [
+          {
+            "payload_bytes": 64,
+            "sent": 20,
+            "received": 20,
+            "lost": 0,
+            "median_ms": 106.451803,
+            "p95_ms": 115.981664,
+            "max_ms": 115.981664
+          },
+          {
+            "payload_bytes": 512,
+            "sent": 20,
+            "received": 20,
+            "lost": 0,
+            "median_ms": 115.958972,
+            "p95_ms": 123.253469,
+            "max_ms": 123.253469
+          },
+          {
+            "payload_bytes": 1200,
+            "sent": 20,
+            "received": 20,
+            "lost": 0,
+            "median_ms": 118.482558,
+            "p95_ms": 118.891226,
+            "max_ms": 118.891226
+          }
+        ],
+        "received": 60,
+        "sent": 60,
+        "warm_up_seconds": 0.996844692
+      },
+      "server_process": {
+        "cpu_peak_percent_one_core": 197.2,
+        "cpu_mean_percent_one_core": 71.9,
+        "peak_rss_mib": 68.2
+      },
+      "client_process": {
+        "cpu_peak_percent_one_core": 87.9,
+        "cpu_mean_percent_one_core": 38.6,
+        "peak_rss_mib": 73.6
+      },
+      "cleanup_errors": []
+    },
+    {
+      "name": "04-au-us",
+      "ok": true,
+      "path": "direct-udp",
+      "server": "au",
+      "client": "us",
+      "iperf": [
+        {
+          "direction": "client-to-server",
+          "streams": 1,
+          "seconds": 11.31,
+          "measured_seconds": 8,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 296.2,
+          "sender_mbps": 285.74,
+          "inner_tcp_retransmits": 7,
+          "loaded_rtt": {
+            "samples": 37,
+            "min_ms": 171.51,
+            "median_ms": 183.64,
+            "p95_ms": 342.45,
+            "max_ms": 348.49,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "server-to-client",
+          "streams": 1,
+          "seconds": 11.5,
+          "measured_seconds": 8,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 272.63,
+          "sender_mbps": 273.19,
+          "inner_tcp_retransmits": 0,
+          "loaded_rtt": {
+            "samples": 41,
+            "min_ms": 171.05,
+            "median_ms": 172.65,
+            "p95_ms": 199.64,
+            "max_ms": 342.91,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "client-to-server",
+          "streams": 4,
+          "seconds": 11.36,
+          "measured_seconds": 8,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 349.28,
+          "sender_mbps": 357.83,
+          "inner_tcp_retransmits": 3,
+          "loaded_rtt": {
+            "samples": 37,
+            "min_ms": 171.57,
+            "median_ms": 192.82,
+            "p95_ms": 305.79,
+            "max_ms": 342.68,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "server-to-client",
+          "streams": 4,
+          "seconds": 11.41,
+          "measured_seconds": 8,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 204.68,
+          "sender_mbps": 205,
+          "inner_tcp_retransmits": 0,
+          "loaded_rtt": {
+            "samples": 41,
+            "min_ms": 171.52,
+            "median_ms": 172.74,
+            "p95_ms": 186.33,
+            "max_ms": 342.77,
+            "errors": 0
+          }
+        }
+      ],
+      "sha256_bytes": 42468352,
+      "udp": {
+        "direct": true,
+        "layer": "UDP Go API, not numeric serve CLI",
+        "lost": 0,
+        "ok": true,
+        "probes": [
+          {
+            "payload_bytes": 64,
+            "sent": 20,
+            "received": 20,
+            "lost": 0,
+            "median_ms": 171.6479,
+            "p95_ms": 172.879469,
+            "max_ms": 172.879469
+          },
+          {
+            "payload_bytes": 512,
+            "sent": 20,
+            "received": 20,
+            "lost": 0,
+            "median_ms": 171.62235,
+            "p95_ms": 172.056565,
+            "max_ms": 172.056565
+          },
+          {
+            "payload_bytes": 1200,
+            "sent": 20,
+            "received": 20,
+            "lost": 0,
+            "median_ms": 171.628292,
+            "p95_ms": 172.156404,
+            "max_ms": 172.156404
+          }
+        ],
+        "received": 60,
+        "sent": 60,
+        "warm_up_seconds": 1.671077259
+      },
+      "server_process": {
+        "cpu_peak_percent_one_core": 119.8,
+        "cpu_mean_percent_one_core": 38,
+        "peak_rss_mib": 82.5
+      },
+      "client_process": {
+        "cpu_peak_percent_one_core": 75.9,
+        "cpu_mean_percent_one_core": 28.6,
+        "peak_rss_mib": 79.6
+      },
+      "cleanup_errors": []
+    },
+    {
+      "name": "05-jp-au",
+      "ok": true,
+      "path": "direct-udp",
+      "server": "jp",
+      "client": "au",
+      "iperf": [
+        {
+          "direction": "client-to-server",
+          "streams": 1,
+          "seconds": 10.91,
+          "measured_seconds": 8,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 249.67,
+          "sender_mbps": 249.63,
+          "inner_tcp_retransmits": 0,
+          "loaded_rtt": {
+            "samples": 51,
+            "min_ms": 100.32,
+            "median_ms": 111.88,
+            "p95_ms": 129.68,
+            "max_ms": 200.02,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "server-to-client",
+          "streams": 1,
+          "seconds": 10.87,
+          "measured_seconds": 8,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 368.29,
+          "sender_mbps": 363.07,
+          "inner_tcp_retransmits": 1,
+          "loaded_rtt": {
+            "samples": 53,
+            "min_ms": 100.11,
+            "median_ms": 101.74,
+            "p95_ms": 111.89,
+            "max_ms": 201.19,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "client-to-server",
+          "streams": 4,
+          "seconds": 10.91,
+          "measured_seconds": 8,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 248.93,
+          "sender_mbps": 247.71,
+          "inner_tcp_retransmits": 0,
+          "loaded_rtt": {
+            "samples": 50,
+            "min_ms": 100.68,
+            "median_ms": 115.14,
+            "p95_ms": 137.99,
+            "max_ms": 201.05,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "server-to-client",
+          "streams": 4,
+          "seconds": 10.98,
+          "measured_seconds": 8,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 334.38,
+          "sender_mbps": 340.21,
+          "inner_tcp_retransmits": 3,
+          "loaded_rtt": {
+            "samples": 53,
+            "min_ms": 100.27,
+            "median_ms": 101.87,
+            "p95_ms": 109.12,
+            "max_ms": 215.62,
+            "errors": 0
+          }
+        }
+      ],
+      "sha256_bytes": 42468352,
+      "udp": {
+        "direct": true,
+        "layer": "UDP Go API, not numeric serve CLI",
+        "lost": 0,
+        "ok": true,
+        "probes": [
+          {
+            "payload_bytes": 64,
+            "sent": 20,
+            "received": 20,
+            "lost": 0,
+            "median_ms": 100.92797,
+            "p95_ms": 101.686791,
+            "max_ms": 101.686791
+          },
+          {
+            "payload_bytes": 512,
+            "sent": 20,
+            "received": 20,
+            "lost": 0,
+            "median_ms": 100.946112,
+            "p95_ms": 101.256219,
+            "max_ms": 101.256219
+          },
+          {
+            "payload_bytes": 1200,
+            "sent": 20,
+            "received": 20,
+            "lost": 0,
+            "median_ms": 100.656958,
+            "p95_ms": 102.649446,
+            "max_ms": 102.649446
+          }
+        ],
+        "received": 60,
+        "sent": 60,
+        "warm_up_seconds": 0.95624175
+      },
+      "server_process": {
+        "cpu_peak_percent_one_core": 205.7,
+        "cpu_mean_percent_one_core": 79.9,
+        "peak_rss_mib": 63.7
+      },
+      "client_process": {
+        "cpu_peak_percent_one_core": 125.7,
+        "cpu_mean_percent_one_core": 55.2,
+        "peak_rss_mib": 66.4
+      },
+      "cleanup_errors": []
+    },
+    {
+      "name": "06-jp-us",
+      "ok": true,
+      "path": "direct-udp",
+      "server": "jp",
+      "client": "us",
+      "iperf": [
+        {
+          "direction": "client-to-server",
+          "streams": 1,
+          "seconds": 10.92,
+          "measured_seconds": 8,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 279.5,
+          "sender_mbps": 279.18,
+          "inner_tcp_retransmits": 6,
+          "loaded_rtt": {
+            "samples": 49,
+            "min_ms": 108.9,
+            "median_ms": 117.13,
+            "p95_ms": 154.31,
+            "max_ms": 217.35,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "server-to-client",
+          "streams": 1,
+          "seconds": 10.93,
+          "measured_seconds": 8,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 306.55,
+          "sender_mbps": 307.8,
+          "inner_tcp_retransmits": 3,
+          "loaded_rtt": {
+            "samples": 51,
+            "min_ms": 108.46,
+            "median_ms": 110.21,
+            "p95_ms": 128.01,
+            "max_ms": 217.41,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "client-to-server",
+          "streams": 4,
+          "seconds": 10.96,
+          "measured_seconds": 8,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 290.4,
+          "sender_mbps": 290.98,
+          "inner_tcp_retransmits": 1,
+          "loaded_rtt": {
+            "samples": 49,
+            "min_ms": 108.91,
+            "median_ms": 118.95,
+            "p95_ms": 143.37,
+            "max_ms": 217.06,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "server-to-client",
+          "streams": 4,
+          "seconds": 10.96,
+          "measured_seconds": 8,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 319.73,
+          "sender_mbps": 316.64,
+          "inner_tcp_retransmits": 3,
+          "loaded_rtt": {
+            "samples": 50,
+            "min_ms": 108.77,
+            "median_ms": 110.26,
+            "p95_ms": 140.59,
+            "max_ms": 363.91,
+            "errors": 0
+          }
+        }
+      ],
+      "sha256_bytes": 42468352,
+      "udp": {
+        "direct": true,
+        "layer": "UDP Go API, not numeric serve CLI",
+        "lost": 0,
+        "ok": true,
+        "probes": [
+          {
+            "payload_bytes": 64,
+            "sent": 20,
+            "received": 20,
+            "lost": 0,
+            "median_ms": 106.48684,
+            "p95_ms": 115.694779,
+            "max_ms": 115.694779
+          },
+          {
+            "payload_bytes": 512,
+            "sent": 20,
+            "received": 20,
+            "lost": 0,
+            "median_ms": 115.719145,
+            "p95_ms": 119.076299,
+            "max_ms": 119.076299
+          },
+          {
+            "payload_bytes": 1200,
+            "sent": 20,
+            "received": 20,
+            "lost": 0,
+            "median_ms": 118.486387,
+            "p95_ms": 121.752687,
+            "max_ms": 121.752687
+          }
+        ],
+        "received": 60,
+        "sent": 60,
+        "warm_up_seconds": 0.990006436
+      },
+      "server_process": {
+        "cpu_peak_percent_one_core": 205.7,
+        "cpu_mean_percent_one_core": 73.1,
+        "peak_rss_mib": 70.4
+      },
+      "client_process": {
+        "cpu_peak_percent_one_core": 81.9,
+        "cpu_mean_percent_one_core": 37.5,
+        "peak_rss_mib": 59.6
+      },
+      "cleanup_errors": []
+    },
+    {
+      "name": "07-au-us-relay",
+      "ok": false,
+      "path": "forced-derp",
+      "error": "RuntimeError: iperf3 tunnel run failed: the server is busy running a test. try again later",
+      "iperf": [
+        {
+          "direction": "client-to-server",
+          "streams": 1,
+          "seconds": 12.15,
+          "measured_seconds": 8,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 23.18,
+          "sender_mbps": 23.59,
+          "inner_tcp_retransmits": 1,
+          "loaded_rtt": {
+            "samples": 27,
+            "min_ms": 204.06,
+            "median_ms": 389.89,
+            "p95_ms": 509.91,
+            "max_ms": 510.72,
+            "errors": 0
+          }
+        }
+      ],
+      "integrity": [
+        {
+          "direction": "server-to-client",
+          "bytes": 1024,
+          "seconds": 2.314,
+          "mbps": 0,
+          "sha256_ok": true
+        },
+        {
+          "direction": "client-to-server",
+          "bytes": 16777216,
+          "seconds": 7.597,
+          "mbps": 17.67,
+          "sha256_ok": true
+        },
+        {
+          "direction": "server-to-client",
+          "bytes": 16777216,
+          "seconds": 7.662,
+          "mbps": 17.52,
+          "sha256_ok": true
+        }
+      ],
+      "cleanup_errors": []
+    },
+    {
+      "name": "08-au-us-relay-isolated",
+      "probe_sha256": "18411035ac035b0046a84ea965b357ceb87426da8fe96a2823883fad9023e1f1",
+      "ok": true,
+      "path": "forced-derp",
+      "server": "au",
+      "client": "us",
+      "iperf": [
+        {
+          "direction": "client-to-server",
+          "streams": 1,
+          "seconds": 12,
+          "measured_seconds": 8,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 22.69,
+          "sender_mbps": 22.28,
+          "inner_tcp_retransmits": 2,
+          "loaded_rtt": {
+            "samples": 25,
+            "min_ms": 203.32,
+            "median_ms": 434.75,
+            "p95_ms": 522.72,
+            "max_ms": 549.23,
+            "errors": 0
+          }
+        },
+        {
+          "direction": "server-to-client",
+          "streams": 1,
+          "seconds": 11.63,
+          "measured_seconds": 8,
+          "omitted_warmup_seconds": 2,
+          "receiver_mbps": 23.09,
+          "sender_mbps": 22.75,
+          "inner_tcp_retransmits": 1,
+          "loaded_rtt": {
+            "samples": 29,
+            "min_ms": 203.74,
+            "median_ms": 278.63,
+            "p95_ms": 440.83,
+            "max_ms": 442.49,
+            "errors": 0
+          }
+        }
+      ],
+      "sha256_bytes": 35128320,
+      "udp": {
+        "direct": false,
+        "layer": "UDP Go API, not numeric serve CLI",
+        "lost": 0,
+        "ok": true,
+        "probes": [
+          {
+            "payload_bytes": 64,
+            "sent": 20,
+            "received": 20,
+            "lost": 0,
+            "median_ms": 204.40433,
+            "p95_ms": 211.287383,
+            "max_ms": 211.287383
+          },
+          {
+            "payload_bytes": 512,
+            "sent": 20,
+            "received": 20,
+            "lost": 0,
+            "median_ms": 203.881245,
+            "p95_ms": 207.395067,
+            "max_ms": 207.395067
+          },
+          {
+            "payload_bytes": 1200,
+            "sent": 20,
+            "received": 20,
+            "lost": 0,
+            "median_ms": 210.664436,
+            "p95_ms": 213.002951,
+            "max_ms": 213.002951
+          }
+        ],
+        "received": 60,
+        "sent": 60,
+        "warm_up_seconds": 1.8396173569999998
+      },
+      "server_process": {
+        "cpu_peak_percent_one_core": 38,
+        "cpu_mean_percent_one_core": 12.2,
+        "peak_rss_mib": 39.5
+      },
+      "client_process": {
+        "cpu_peak_percent_one_core": 36,
+        "cpu_mean_percent_one_core": 12.5,
+        "peak_rss_mib": 38.6
+      },
+      "cleanup_errors": []
+    }
+  ],
+  "initial_matrix_passed": false,
+  "passing_runs": 7,
+  "retained_failed_runs": 1,
+  "passed_run_sha256_bytes": 289938432,
+  "passed_run_udp_received": 420
+}

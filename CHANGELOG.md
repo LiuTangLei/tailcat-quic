@@ -1,5 +1,14 @@
 # tailcat-quic changelog
 
+## Next QUIC release (unpublished, 2026-09-27)
+
+- Release browser Promise executors after invocation so completed writes do not retain their payloads.
+- Reclaim connection/listener callbacks on close and session shutdown, while keeping saved JavaScript methods and repeated close safe.
+- Close browser send connections on file, write, half-close and response errors; preserve the error instead of reporting successful delivery.
+- Add WASM memory/lifecycle, injected failure and repeated real-Chrome transfer regressions. Public transport dependency pins are unchanged.
+
+See `docs/browser-lifecycle-fix-20260927.md` for exact validation scope and server-test evidence.
+
 ## v0.7.0-quic.3 (release candidate, 2026-09-25)
 
 - Pin the shared public `quic-go v0.63.0-quic.3` source tag, with lightly tuned BBRv3, bounded DATAGRAM allocation and event-driven final-delivery acknowledgment.

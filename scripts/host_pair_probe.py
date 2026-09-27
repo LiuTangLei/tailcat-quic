@@ -222,10 +222,19 @@ def server(args):
         udp = UDPServer(("127.0.0.1", echo_port), UDPEcho)
         services.append(udp)
         threading.Thread(target=udp.serve_forever, daemon=True).start()
-        iperf_port = free_port()
-        ip, _ = spawn(["iperf3", "-s", "-B", "127.0.0.1", "-p", str(iperf_port)], path, "iperf", args.relay)
-        children.append(ip)
-        command = [args.cli, "--key=new", "--verbose", "--json", "serve", f"{echo_port},{http_port},{iperf_port}"]
+        # A completed client can exit before the remote iperf control connection
+        # has finished closing over a high-RTT relay. Give each sample its own
+        # listener instead of racing the next sample against that cleanup.
+        iperf_ports = []
+        for i in range(2 if args.relay else 4):
+            port = free_port()
+            while port in iperf_ports:
+                port = free_port()
+            iperf_ports.append(port)
+            ip, _ = spawn(["iperf3", "-s", "-B", "127.0.0.1", "-p", str(port)], path, f"iperf-{i}", args.relay)
+            children.append(ip)
+        served = ",".join(map(str, [echo_port, http_port] + iperf_ports))
+        command = [args.cli, "--key=new", "--verbose", "--json", "serve", served]
         tc, log = spawn(command, path, "server", args.relay)
         children.append(tc)
         usage = ProcessUsage(tc.pid)
@@ -242,7 +251,7 @@ def server(args):
             udp_info = readiness(driver)
         # This line is consumed privately by the controlling SSH process.
         print(json.dumps({"code": code, "echo_port": echo_port, "udp_info": udp_info,
-                          "http_port": http_port, "iperf_port": iperf_port}), flush=True)
+                          "http_port": http_port, "iperf_ports": iperf_ports}), flush=True)
         sys.stdin.readline()
         print(json.dumps({"server_evidence": log_evidence(log), "server_process": usage.result()}), flush=True)
     finally:
@@ -414,14 +423,15 @@ def udp_probe(args, info, path):
 def client(args):
     info = json.loads(sys.stdin.readline())
     path = Path(args.cli).resolve().parent
-    ports = [info[k] for k in ("echo_port", "http_port", "iperf_port")]
+    ports = [info[k] for k in ("echo_port", "http_port")] + info["iperf_ports"]
     command = [args.cli, "--key=new", "--verbose", "forward", info["code"]] + [f"0:{p}" for p in ports]
     tc, log = spawn(command, path, "client", args.relay)
     usage = ProcessUsage(tc.pid)
     result = {"path": "forced-derp" if args.relay else "direct-udp", "iperf": [], "integrity": []}
     try:
         mapping = wait_forward(tc, log, ports)
-        ep, hp, ip = [mapping[x] for x in ports]
+        ep, hp = [mapping[x] for x in ports[:2]]
+        iperf_ports = iter(mapping[x] for x in ports[2:])
         start = time.monotonic()
         result["integrity"].append(transfer(hp, 1 << 10, False))
         result["cold_ready_seconds"] = round(time.monotonic()-start, 3)
@@ -429,6 +439,7 @@ def client(args):
         result["integrity"].extend(transfer(hp, args.size_mib << 20, up) for up in (True, False))
         for streams in ([1] if args.relay else [1, 4]):
             for reverse in (False, True):
+                ip = next(iperf_ports)
                 finished = threading.Event()
                 latency = {}
                 thread = threading.Thread(target=lambda: latency.update(echo_samples(ep, finish=finished)))
@@ -464,6 +475,8 @@ def client(args):
         result["total_sha256_bytes"] = sum(x["bytes"] for k in ("integrity", "concurrent_integrity", "idle_recovery") for x in result[k])
         if (args.transport == "h3" and not result["client_evidence"]["native_h3_no_wg"]) or result["client_evidence"]["panic_seen"]:
             raise RuntimeError("missing required engine evidence or panic observed")
+        if args.transport == "wg" and not result["client_evidence"]["native_wg"]:
+            raise RuntimeError("missing WireGuard client engine evidence")
         if not args.relay and not result["client_evidence"]["direct_seen"]:
             raise RuntimeError("data succeeded but no direct path was observed")
         result["ok"] = result["udp"].get("ok", result["udp"].get("lost", 0) == 0)
@@ -482,8 +495,12 @@ def drive(args):
     hosts = [args.server, args.client]
     script = Path(__file__).resolve()
     binary = Path(args.binary).resolve()
+    ssh_options = ["-o", "BatchMode=yes", "-o", "ConnectTimeout=10"]
+    if args.known_hosts:
+        known_hosts = Path(args.known_hosts).resolve(strict=True)
+        ssh_options += ["-o", "StrictHostKeyChecking=yes", "-o", "UserKnownHostsFile=" + str(known_hosts)]
     def ssh(host, cmd):
-        return ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", host, cmd]
+        return ["ssh"] + ssh_options + [host, cmd]
     try:
         for host in hosts:
             p = subprocess.run(ssh(host, "mktemp -d /dev/shm/tailcat-pair.XXXXXXXX"), check=True,
@@ -495,7 +512,7 @@ def drive(args):
             sources = [str(script), str(binary)]
             if args.udp_driver:
                 sources.append(str(Path(args.udp_driver).resolve()))
-            subprocess.run(["scp", "-C", "-q", "-o", "BatchMode=yes"] + sources +
+            subprocess.run(["scp", "-C", "-q"] + ssh_options + sources +
                            [host+":"+path+"/"], check=True, timeout=120)
             subprocess.run(ssh(host, "chmod 700 " + shlex.quote(path+"/"+binary.name)), check=True, timeout=15)
         checksums = []
@@ -532,6 +549,12 @@ def drive(args):
         if args.transport == "h3" and not report["server_evidence"]["native_h3_no_wg"]:
             report["ok"] = False
             report["server_error"] = "missing H3 engine evidence"
+        if args.transport == "wg" and not report["server_evidence"]["native_wg"]:
+            report["ok"] = False
+            report["server_error"] = "missing WireGuard server engine evidence"
+        if report["server_evidence"]["panic_seen"]:
+            report["ok"] = False
+            report["server_error"] = "server panic observed"
         report["transport"] = args.transport
         if args.report:
             destination = Path(args.report).resolve()
@@ -585,6 +608,7 @@ def main():
             parser.add_argument("--client", required=True)
             parser.add_argument("--binary", required=True)
             parser.add_argument("--report", default="", help="new local JSON test evidence file")
+            parser.add_argument("--known-hosts", help="existing trusted SSH host-key file; require a matching key")
             parser.add_argument("--server-label", default="server")
             parser.add_argument("--client-label", default="client")
         else:

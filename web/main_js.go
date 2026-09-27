@@ -14,7 +14,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log"
 	"net"
 	"syscall/js"
@@ -123,11 +122,13 @@ func tailcatListen(this js.Value, args []js.Value) any {
 			srv.Close()
 			return nil, fmt.Errorf("Server.Start: %w", err)
 		}
+		callbacks := newJSCallbacks()
 		return map[string]any{
 			"addr":           string(addr),
 			"privateKeyJSON": string(keyOut),
-			"close": js.FuncOf(func(this js.Value, args []js.Value) any {
-				srv.Close()
+			"close": callbacks.bind("close", func(args []js.Value) any {
+				callbacks.release()
+				go srv.Close()
 				return nil
 			}),
 		}, nil
@@ -211,72 +212,6 @@ func pingUntil(ctx context.Context, cl *tailcat.Client) error {
 	}
 }
 
-// makeJSConn wraps a tunneled TCP connection as a JavaScript object:
-//
-//	{
-//	  port: number,
-//	  read: () => Promise<Uint8Array|null>, // null on EOF; no concurrent calls
-//	  write: (Uint8Array) => Promise,
-//	  closeWrite: () => Promise, // half-close, netcat style
-//	  close: () => {},
-//	}
-//
-// read is pull-based: the browser only reads from netstack when the
-// page asks for more, so a fast sender stalls on TCP backpressure
-// rather than filling browser memory.
-func makeJSConn(c net.Conn, port uint16, onClose func()) js.Value {
-	buf := make([]byte, 64<<10)
-	return js.ValueOf(map[string]any{
-		"port": int(port),
-		"read": js.FuncOf(func(this js.Value, args []js.Value) any {
-			return makePromise(func() (any, error) {
-				n, err := c.Read(buf)
-				if n > 0 {
-					u8 := js.Global().Get("Uint8Array").New(n)
-					js.CopyBytesToJS(u8, buf[:n])
-					return u8, nil
-				}
-				if err == nil || errors.Is(err, io.EOF) {
-					return js.Null(), nil
-				}
-				return nil, err
-			})
-		}),
-		"write": js.FuncOf(func(this js.Value, args []js.Value) any {
-			if len(args) != 1 {
-				return rejectedPromise(errors.New("write requires a Uint8Array"))
-			}
-			b := make([]byte, args[0].Get("length").Int())
-			js.CopyBytesToGo(b, args[0])
-			return makePromise(func() (any, error) {
-				if _, err := c.Write(b); err != nil {
-					return nil, err
-				}
-				return js.Undefined(), nil
-			})
-		}),
-		"closeWrite": js.FuncOf(func(this js.Value, args []js.Value) any {
-			return makePromise(func() (any, error) {
-				cw, ok := c.(interface{ CloseWrite() error })
-				if !ok {
-					return nil, errors.New("connection does not support half-close")
-				}
-				if err := cw.CloseWrite(); err != nil {
-					return nil, err
-				}
-				return js.Undefined(), nil
-			})
-		}),
-		"close": js.FuncOf(func(this js.Value, args []js.Value) any {
-			c.Close()
-			if onClose != nil {
-				onClose()
-			}
-			return nil
-		}),
-	})
-}
-
 func optString(v js.Value, name string) string {
 	if p := v.Get(name); p.Type() == js.TypeString {
 		return p.String()
@@ -289,26 +224,4 @@ func optLogf(v js.Value) logger.Logf {
 		return log.Printf
 	}
 	return logger.Discard
-}
-
-// makePromise runs f on a new goroutine and returns a JavaScript
-// Promise of its result, rejected with a JavaScript Error if f
-// returns an error.
-func makePromise(f func() (any, error)) js.Value {
-	handler := js.FuncOf(func(this js.Value, args []js.Value) any {
-		resolve, reject := args[0], args[1]
-		go func() {
-			if res, err := f(); err == nil {
-				resolve.Invoke(res)
-			} else {
-				reject.Invoke(js.Global().Get("Error").New(err.Error()))
-			}
-		}()
-		return nil
-	})
-	return js.Global().Get("Promise").New(handler)
-}
-
-func rejectedPromise(err error) js.Value {
-	return js.Global().Get("Promise").Call("reject", js.Global().Get("Error").New(err.Error()))
 }

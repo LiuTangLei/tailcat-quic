@@ -8,6 +8,7 @@ import argparse
 import ipaddress
 import json
 import os
+from pathlib import Path
 import shlex
 import signal
 import subprocess
@@ -21,19 +22,29 @@ def main():
     p.add_argument("--server-ip", required=True)
     p.add_argument("--port", type=int, default=39397)
     p.add_argument("--seconds", type=int, default=10)
+    p.add_argument("--known-hosts", help="Existing trusted SSH host key file")
+    p.add_argument("--report", type=Path, help="Save every sample, including failures")
     args = p.parse_args()
     ip = str(ipaddress.ip_address(args.server_ip))
     if not 1024 <= args.port <= 65535 or not 5 <= args.seconds <= 20:
         p.error("port must be 1024..65535; seconds must be 5..20")
     def ssh(host, command):
-        return ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=8", host, command]
+        options = ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=8", "-o", "StrictHostKeyChecking=yes"]
+        if args.known_hosts:
+            options += ["-o", "UserKnownHostsFile=" + args.known_hosts]
+        return options + [host, command]
     report = []
+    def save():
+        if args.report:
+            args.report.write_text(json.dumps({"kind": "native-link-baseline", "results": report}, indent=2) + "\n")
     cases = [("tcp", 1, False), ("tcp", 1, True), ("tcp", 4, False),
              ("tcp", 4, True), ("udp-50m", 1, False), ("udp-50m", 1, True)]
     for protocol, streams, reverse in cases:
         server_cmd = ["env", "TMPDIR=/dev/shm", "timeout", "45", "iperf3", "-s", "-1", "-J", "-B", ip, "-p", str(args.port)]
         server = subprocess.Popen(ssh(args.server, shlex.join(server_cmd)), stdout=subprocess.PIPE,
                                   stderr=subprocess.PIPE, start_new_session=True)
+        row = {"protocol": protocol, "streams": streams,
+               "direction": "server-to-client" if reverse else "client-to-server"}
         try:
             for _ in range(8):
                 ready = subprocess.run(ssh(args.server, "ss -H -ltn 'sport = :"+str(args.port)+"'"),
@@ -57,8 +68,6 @@ def main():
             if out.returncode or "error" in data:
                 raise RuntimeError("native test failed: " + data.get("error", "process exit"))
             end = data["end"]
-            row = {"protocol": protocol, "streams": streams,
-                   "direction": "server-to-client" if reverse else "client-to-server"}
             if protocol == "tcp":
                 row.update(receiver_mbps=round(end["sum_received"]["bits_per_second"]/1e6, 2),
                            sender_mbps=round(end["sum_sent"]["bits_per_second"]/1e6, 2),
@@ -69,7 +78,14 @@ def main():
                            lost_percent=summary.get("lost_percent"), jitter_ms=summary.get("jitter_ms"),
                            packets=summary.get("packets"), lost_packets=summary.get("lost_packets"))
             report.append(row)
+            save()
             server.communicate(timeout=8)
+        except Exception as exc:
+            if row not in report:
+                report.append(row)
+            row["error"] = str(exc)
+            save()
+            raise
         finally:
             if server.poll() is None:
                 os.killpg(server.pid, signal.SIGTERM)
