@@ -99,8 +99,6 @@ Saved keys are optional. Once a `default` server key exists, subsequent server r
 
 TCP services use reliable QUIC streams; UDP uses QUIC DATAGRAM. Encryption, node authentication and connection secrets are automatic. Public relays can be rate limited, so throughput depends on the path and the machines.
 
-In the September 27 comparison with official Tailcat's userspace WireGuard, QUIC reached **556 / 506 Mbps** in two four-stream runs in one direction between Japanese nodes. Single-stream and other paths were slower; this is not a general 500 Mbps guarantee. [All samples and validation scope](docs/wg-quic4-acceptance-20260927.md).
-
 ## Experimental features
 
 The browser/WebAssembly demo and browser-inspired TLS fingerprint behavior are described in [Experimental features](docs/experimental.md). They require no setup for normal CLI use. Browser traffic currently uses relays.

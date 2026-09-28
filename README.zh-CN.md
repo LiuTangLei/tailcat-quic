@@ -99,8 +99,6 @@ tailcat serve --ssh-authorized-keys ~/.ssh/authorized_keys ssh
 
 TCP 服务使用可靠 QUIC 流，UDP 使用 QUIC DATAGRAM。加密、节点认证和连接秘密自动配置。公共中继可能限速，实际速度取决于线路和机器。
 
-9 月 27 日与官方 Tailcat 用户态 WireGuard 的对比中，日本节点一个方向的 QUIC 四流两轮测得 **556 / 506 Mbps**。单流及其他线路更慢，并非所有场景都能达到 500 Mbps。[完整测速和验收范围](docs/wg-quic4-acceptance-20260927.md)。
-
 ## 实验性功能
 
 浏览器/WebAssembly 演示和浏览器风格 TLS 指纹的说明放在[实验性功能](docs/experimental.md)。正常使用命令行无需配置这些功能。浏览器目前通过中继传输。

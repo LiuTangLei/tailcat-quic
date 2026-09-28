@@ -99,8 +99,6 @@ tailcat serve --ssh-authorized-keys ~/.ssh/authorized_keys ssh
 
 TCP は信頼性のある QUIC ストリーム、UDP は QUIC DATAGRAM を使用します。暗号化、ノード認証、接続シークレットは自動設定されます。公共リレーには帯域制限がある場合があり、速度は経路とマシンに依存します。
 
-9 月 27 日の公式 Tailcat userspace WireGuard との比較では、日本ノード間の一方向で QUIC の 4 ストリームが **556 / 506 Mbps** でした。単一ストリームや他の経路はこれより遅く、すべての環境で 500 Mbps を保証するものではありません。[全測定結果](docs/wg-quic4-acceptance-20260927.md)。
-
 ## 実験的機能
 
 Browser/WebAssembly デモとブラウザ風 TLS フィンガープリントは[実験的機能](docs/experimental.md)にまとめています。通常の CLI 利用に追加設定は不要です。ブラウザ通信は現在リレー経由です。
