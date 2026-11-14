@@ -8,8 +8,14 @@ github.com/BurntSushi/toml v1.6.0 h1:dRaEfpa2VI55EwlIW72hMRHdWouJeRF7TPYhI+AUQjk
 github.com/BurntSushi/toml v1.6.0/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
 github.com/LiuTangLei/quic-go v0.63.0-quic.3 h1:fxQbjBZWDXYxrdcB782e/QUmUhBL8bsbbuT9FtqTMAs=
 github.com/LiuTangLei/quic-go v0.63.0-quic.3/go.mod h1:V5cuc1OxYYDdr+TgQThkS0e15A0yF4U0yr03MA2FP3U=
+github.com/LiuTangLei/quic-go v0.65.0-quic.2 h1:FE1u6GItmHaDEpRc9Q7h5QUYDHKJPRi+xttcVmJmh0Y=
+github.com/LiuTangLei/quic-go v0.65.0-quic.2/go.mod h1:OUW5S5Qu4zqjFGFlPthYnILnS4Voqo83pZqiRmWCmmk=
 github.com/LiuTangLei/tailscale v1.102.5-0.20260923003659-b4f1aa3cd300 h1:i/caN4lx/me9Bow8loqBzJ6s7B+iebFGYMNAb+cwJ2w=
 github.com/LiuTangLei/tailscale v1.102.5-0.20260923003659-b4f1aa3cd300/go.mod h1:yYNj+NTvvFdd7gOLra0xHN/2x11QgYQSv+T13hm5V18=
+github.com/LiuTangLei/tailscale v1.102.5-tailcat.1 h1:l8TOhz6GMHZL37iJFeHbgzPmb1CeB3PifVW/CUYi/Jg=
+github.com/LiuTangLei/tailscale v1.102.5-tailcat.1/go.mod h1:uFoUYAyOxFpQsY1ZLRe6ZAmaAabX3OgDhOEo/h3sUpY=
+github.com/LiuTangLei/utls v1.8.3-0.20261021023852-7effde6a93dc h1:T3DDZUtc9ENa2lQ8BVzm0SdZ+If8WFXIwu/QyY0fsJM=
+github.com/LiuTangLei/utls v1.8.3-0.20261021023852-7effde6a93dc/go.mod h1:jkSOEkLqn+S/jtpEHPOsVv/4V4EVnelwbMQl4vCWXAM=
 github.com/LiuTangLei/wireguard-go v0.0.33-0.20260910045057-ed22747d204e h1:mGieoLdA0boJaY0o4PFAgPDfkRaBinKygczxKIHJ1hs=
 github.com/LiuTangLei/wireguard-go v0.0.33-0.20260910045057-ed22747d204e/go.mod h1:f7uSn74R1/LKiqDHRok1pV2vnEelx6Catt+uAkBzgrk=
 github.com/akutz/memconn v0.1.0 h1:NawI0TORU4hcOMsMr11g7vwlCdkYeLKXBcxWu2W/P8A=
