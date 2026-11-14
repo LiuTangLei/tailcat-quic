@@ -1,14 +1,19 @@
 # Tailcat-QUIC v0.7.0-quic.5 validation scope
 
-This revision moves the shared library from QUIC `v0.63.0-quic.3` to
-`v0.65.0-quic.2`. The latter includes the reviewed upstream 0.65 merge and a
-fix for concurrent public address reads during client path migration.
+This revision selects shared QUIC `v0.65.0-quic.3` in the application root.
+It includes the reviewed upstream 0.65 merge, safe concurrent public address
+and capability reads during client path migration, and synchronized Linux
+GSO fallback state after a segmentation error.
 
 The application keeps its dedicated Tailscale integration core, published as
 `v1.102.5-tailcat.1`. This preserves its peer configuration and immediate peer
 revocation APIs; the core adapts the two authenticated CONNECT handlers to the
 new HTTPStream error return. Both module roots explicitly pin the compatible
 uTLS fork. Release packages must contain only public immutable module pins.
+The application root selects QUIC `.3` for the complete dependency graph.
+Go ignores replacement directives declared inside dependencies, including
+the dedicated core's historical QUIC replacement; the core itself does not
+need a new version for this fix.
 
 Mandatory connection secrets, node authentication, reliable TCP streams,
 BBRv3, pacing, final-byte/FIN acknowledgment and explicit abort remain.
