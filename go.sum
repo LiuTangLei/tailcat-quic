@@ -10,6 +10,8 @@ github.com/LiuTangLei/quic-go v0.63.0-quic.3 h1:fxQbjBZWDXYxrdcB782e/QUmUhBL8bsb
 github.com/LiuTangLei/quic-go v0.63.0-quic.3/go.mod h1:V5cuc1OxYYDdr+TgQThkS0e15A0yF4U0yr03MA2FP3U=
 github.com/LiuTangLei/quic-go v0.65.0-quic.2 h1:FE1u6GItmHaDEpRc9Q7h5QUYDHKJPRi+xttcVmJmh0Y=
 github.com/LiuTangLei/quic-go v0.65.0-quic.2/go.mod h1:OUW5S5Qu4zqjFGFlPthYnILnS4Voqo83pZqiRmWCmmk=
+github.com/LiuTangLei/quic-go v0.65.0-quic.3 h1:7YEsh/rOai/WPdS1wtWmPxCSxagemuo3FbWRpxw65gA=
+github.com/LiuTangLei/quic-go v0.65.0-quic.3/go.mod h1:OUW5S5Qu4zqjFGFlPthYnILnS4Voqo83pZqiRmWCmmk=
 github.com/LiuTangLei/tailscale v1.102.5-0.20260923003659-b4f1aa3cd300 h1:i/caN4lx/me9Bow8loqBzJ6s7B+iebFGYMNAb+cwJ2w=
 github.com/LiuTangLei/tailscale v1.102.5-0.20260923003659-b4f1aa3cd300/go.mod h1:yYNj+NTvvFdd7gOLra0xHN/2x11QgYQSv+T13hm5V18=
 github.com/LiuTangLei/tailscale v1.102.5-tailcat.1 h1:l8TOhz6GMHZL37iJFeHbgzPmb1CeB3PifVW/CUYi/Jg=
