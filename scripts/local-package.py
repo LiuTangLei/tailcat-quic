@@ -43,6 +43,8 @@ def main() -> None:
     targets = a.platforms.split(',')
     if not targets or any(x not in TARGETS for x in targets):
         p.error('unsupported platform')
+    if not a.test_only and any(x.startswith('darwin/') for x in targets) and not shutil.which('codesign'):
+        p.error('Darwin release archives require codesign; build those targets on macOS')
     dirty = bool(capture('git', 'status', '--porcelain'))
     overrides = [('tailscale.com', a.tailscale_root), ('github.com/quic-go/quic-go', a.quic_root)]
     if not a.test_only and (dirty or any(path for _, path in overrides)):
@@ -50,21 +52,24 @@ def main() -> None:
     if (out / 'build.json').exists():
         p.error('output already contains a build; preserve previous evidence')
     out.mkdir(parents=True, exist_ok=True)
-    mod = out / 'candidate.mod'
-    shutil.copyfile(root/'go.mod', mod)
-    shutil.copyfile(root/'go.sum', out/'candidate.sum')
-    for name, path in overrides:
-        if path:
-            path = path.resolve()
-            if not (path/'go.mod').is_file():
-                p.error('missing dependency module')
-            subprocess.run(['go', 'mod', 'edit', '-modfile='+str(mod), '-replace='+name+'='+str(path)], check=True)
+    module_args = []
+    if a.test_only:
+        mod = out / 'candidate.mod'
+        shutil.copyfile(root/'go.mod', mod)
+        shutil.copyfile(root/'go.sum', out/'candidate.sum')
+        module_args = ['-modfile='+str(mod)]
+        for name, path in overrides:
+            if path:
+                path = path.resolve()
+                if not (path/'go.mod').is_file():
+                    p.error('missing dependency module')
+                subprocess.run(['go', 'mod', 'edit', *module_args, '-replace='+name+'='+str(path)], check=True)
     modules = {}
-    for name in ('tailscale.com', 'github.com/quic-go/quic-go', 'github.com/LiuTangLei/wireguard-go'):
-        module = json.loads(capture('go', 'list', '-modfile='+str(mod), '-m', '-json', name))
+    for name in ('tailscale.com', 'github.com/quic-go/quic-go', 'github.com/refraction-networking/utls', 'github.com/LiuTangLei/wireguard-go'):
+        module = json.loads(capture('go', 'list', '-mod=readonly', *module_args, '-m', '-json', name))
         selected = module.get('Replace') or module
-        if not a.test_only and not selected.get('Version'):
-            p.error('unversioned dependency: '+name)
+        if not a.test_only and (not selected.get('Version') or not selected.get('Sum')):
+            p.error('dependency needs a public immutable version and checksum: '+name)
         modules[name] = {k: selected[k] for k in ('Path', 'Version', 'Sum') if k in selected}
     revision = capture('git', 'rev-parse', 'HEAD')
     record = {'source': revision, 'source_dirty': dirty, 'version': a.version,
@@ -77,9 +82,12 @@ def main() -> None:
                'CGO_ENABLED': '0', 'GOWORK': 'off'}
         suffix = '.exe' if goos == 'windows' else ''
         binary = out/('tailcat-'+goos+'-'+arch+suffix)
-        cmd = ['go','build','-mod=readonly','-modfile='+str(mod),'-trimpath',
+        cmd = ['go','build','-mod=readonly',*module_args,'-buildvcs=true','-trimpath',
                '-tags='+tags,'-ldflags=-s -w -X main.version='+a.version,'-o',str(binary),'./cmd/tailcat']
         subprocess.run(cmd, env=env, check=True)
+        if goos == 'darwin' and not a.test_only:
+            subprocess.run(['codesign', '--force', '--sign', '-', str(binary)], check=True)
+            subprocess.run(['codesign', '--verify', '--strict', str(binary)], check=True)
         record['files'][binary.name] = hashlib.sha256(binary.read_bytes()).hexdigest()
         print('BUILT', target, record['files'][binary.name], flush=True)
         if a.udp_probe and target == 'linux/amd64':
