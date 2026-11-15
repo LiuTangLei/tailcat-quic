@@ -24,23 +24,30 @@ type perfBackend struct {
 
 func (f perfFactory) New(h wgtransport.Host) (wgtransport.Backend, error) {
 	backend, err := f.Factory.New(h)
-	if err != nil { return nil, err }
+	if err != nil {
+		return nil, err
+	}
 	b := &perfBackend{Backend: backend.(*quicbind.Backend), done: make(chan struct{})}
 	go func() {
 		tick := time.NewTicker(time.Second)
 		defer tick.Stop()
 		for {
 			select {
-			case <-b.done: return
+			case <-b.done:
+				return
 			case <-tick.C:
 				snapshot := b.Snapshot()
 				out := make(map[string]any)
-				for _, key := range []string{"sent_packets", "received_packets", "send_drops", "send_errors", "receive_drops", "raw_drops", "fragmented_packets", "malformed_frames", "enqueue_waits", "tx_queued_bytes", "rx_queued_bytes", "connections", "active_connections", "tcp_streams", "tcp_stream_bytes_sent", "tcp_stream_bytes_received", "connection_stats", "quic_receive_queue_drops", "ip_data_plane"} {
-					if value, ok := snapshot[key]; ok { out[key] = value }
+				for _, key := range []string{"sent_packets", "received_packets", "send_drops", "send_errors", "receive_drops", "raw_drops", "fragmented_packets", "malformed_frames", "enqueue_waits", "tx_queued_bytes", "rx_queued_bytes", "connections", "active_connections", "tcp_streams", "tcp_stream_send", "tcp_stream_bytes_sent", "tcp_stream_bytes_received", "connection_stats", "raw_write_batches", "raw_single_writes", "raw_batch_packets", "quic_receive_queue_drops", "ip_data_plane"} {
+					if value, ok := snapshot[key]; ok {
+						out[key] = value
+					}
 				}
 				if len(out) > 0 {
 					data, err := json.Marshal(out)
-					if err == nil { log.Printf("tailcat-perf %s", data) }
+					if err == nil {
+						log.Printf("tailcat-perf %s", data)
+					}
 				}
 			}
 		}
@@ -48,6 +55,6 @@ func (f perfFactory) New(h wgtransport.Host) (wgtransport.Backend, error) {
 	return b, nil
 }
 func (b *perfBackend) Close() error {
-	b.once.Do(func(){ close(b.done) })
+	b.once.Do(func() { close(b.done) })
 	return b.Backend.Close()
 }
