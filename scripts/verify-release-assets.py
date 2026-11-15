@@ -85,7 +85,7 @@ def verify(assets, tag, revision):
         output = run([str(executable), "version"], capture_output=True).stdout.strip()
         if output != tag:
             raise ValueError("packaged executable has the wrong version: " + output)
-        info = run(["go", "version", "-m", str(executable)], capture_output=True).stdout
+        info = "\n".join(run(["go", "version", "-m", str(executable)], capture_output=True).stdout.splitlines()[1:])
         for marker in ["github.com/LiuTangLei/quic-go\tv0.65.0-quic.4",
                        "github.com/LiuTangLei/tailscale\tv1.102.5-tailcat.2",
                        "github.com/LiuTangLei/utls\tv1.8.3-0.20261021023852-7effde6a93dc",
