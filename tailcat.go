@@ -888,7 +888,9 @@ func (s *Server) Close() error {
 // DrainTCP until the TIME-WAIT timer fires.
 func (s *Server) DrainTCP(ctx context.Context) error {
 	if s.lb != nil && s.lb.h3Backend != nil {
-		if err := s.lb.h3Backend.DrainTCPStreams(ctx); err != nil { return err }
+		if err := s.lb.h3Backend.DrainTCPStreams(ctx); err != nil {
+			return err
+		}
 	}
 	// Wait blocks until the endpoint is fully closed (EventHUp).
 	// Non-TCP endpoints return immediately. A waiter goroutine may
@@ -921,7 +923,9 @@ func (s *Server) DrainTCP(ctx context.Context) error {
 // retransmitting its FIN to a dead peer until it gives up.
 func (c *Client) DrainTCP(ctx context.Context) error {
 	if c.lb != nil && c.lb.h3Backend != nil {
-		if err := c.lb.h3Backend.DrainTCPStreams(ctx); err != nil { return err }
+		if err := c.lb.h3Backend.DrainTCPStreams(ctx); err != nil {
+			return err
+		}
 	}
 	for {
 		busy := false
@@ -2350,28 +2354,42 @@ type closeWriter interface {
 // style) work through the proxy.
 func ProxyConns(a, b net.Conn) {
 	var wg sync.WaitGroup
+	var abortOnce sync.Once
+	abort := func() {
+		abortOnce.Do(func() {
+			for _, c := range []net.Conn{a, b} {
+				if aborter, ok := c.(interface{ Abort() error }); ok {
+					_ = aborter.Abort()
+				} else {
+					_ = c.Close()
+				}
+			}
+		})
+	}
 	wg.Add(2)
 	cp := func(dst, src net.Conn) {
 		defer wg.Done()
-		io.Copy(dst, src)
+		if _, err := io.Copy(dst, src); err != nil {
+			abort()
+			return
+		}
 		if cw, ok := dst.(closeWriter); ok {
-			cw.CloseWrite()
+			if err := cw.CloseWrite(); err != nil {
+				abort()
+			}
 		} else {
 			dst.Close()
 		}
 	}
 	go cp(a, b)
-	go cp(b, a)
+	cp(b, a)
 	wg.Wait()
-	wg.Add(2)
+	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		closeProxyConn(a)
 	}()
-	go func() {
-		defer wg.Done()
-		closeProxyConn(b)
-	}()
+	closeProxyConn(b)
 	wg.Wait()
 }
 
