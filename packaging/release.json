@@ -1,36 +1,36 @@
 {
   "repository": "LiuTangLei/tailcat-quic",
-  "version": "v0.7.0-quic.4",
-  "source_commit": "0c4c83b7448d17e2cf9916ec45ba60c1c4a867ee",
-  "base_url": "https://github.com/LiuTangLei/tailcat-quic/releases/download/v0.7.0-quic.4",
+  "version": "v0.8.0-quic",
+  "source_commit": "112d955a31960a9c952e2b7bb1075e56918eeb70",
+  "base_url": "https://github.com/LiuTangLei/tailcat-quic/releases/download/v0.8.0-quic",
   "platforms": {
     "linux/amd64": {
-      "asset": "tailcat_0.7.0-quic.4_linux_amd64.tar.gz",
-      "sha256": "942d296b99f0faebaea84d999df3f8f264fe9be8ab9fb7014adeb20c0123e005"
+      "asset": "tailcat_0.8.0-quic_linux_amd64.tar.gz",
+      "sha256": "712eb6638e9658b21ec4d32c5a40ecaf1949919e1d04f7403cb04f02aeed8622"
     },
     "linux/arm64": {
-      "asset": "tailcat_0.7.0-quic.4_linux_arm64.tar.gz",
-      "sha256": "817b102d906f7edbc6d4d7f9f0cf6a687bb13fd6117a09a10f1cc1538f4b1072"
+      "asset": "tailcat_0.8.0-quic_linux_arm64.tar.gz",
+      "sha256": "3967a7ef3f6b5e5b44927fd84dfe3d68106fa06ba2f500486473335f596eccf7"
     },
     "linux/armv7": {
-      "asset": "tailcat_0.7.0-quic.4_linux_armv7.tar.gz",
-      "sha256": "95ee44bd68efb32fc05717faf5c9a2f5c0c692c6c77a170570c97bbc699a9dbf"
+      "asset": "tailcat_0.8.0-quic_linux_armv7.tar.gz",
+      "sha256": "4c1ff29e8b2b7ef403faf0ad2d69dd6a674e428a741b0e9fc003be1ed7878fd9"
     },
     "darwin/amd64": {
-      "asset": "tailcat_0.7.0-quic.4_darwin_amd64.tar.gz",
-      "sha256": "a5349ed5caf282cc2a656a51b5e5d3c9b425b67dd5f23905114de7eaa8727dd6"
+      "asset": "tailcat_0.8.0-quic_darwin_amd64.tar.gz",
+      "sha256": "1d8f57d837d90f6fa3fdad79b477218c976ddeaf271e003d9d6c66106fb87309"
     },
     "darwin/arm64": {
-      "asset": "tailcat_0.7.0-quic.4_darwin_arm64.tar.gz",
-      "sha256": "9e8220d73ff6a57de52bfe37856f7a04be585876026fea74b61a22e1ed079a74"
+      "asset": "tailcat_0.8.0-quic_darwin_arm64.tar.gz",
+      "sha256": "f974a58b75b9d162596cbd61410e29653095c316acc68b03826a1cb250f7a4a9"
     },
     "windows/amd64": {
-      "asset": "tailcat_0.7.0-quic.4_windows_amd64.zip",
-      "sha256": "96af9e3f5b3058b90a51e383dc4b664a2eb04c3fab3441963eb21d0772729e48"
+      "asset": "tailcat_0.8.0-quic_windows_amd64.zip",
+      "sha256": "0156964067b1114bf23d953ddf0c1ec132bb4d2756edbc8c1c011372f6355679"
     },
     "windows/arm64": {
-      "asset": "tailcat_0.7.0-quic.4_windows_arm64.zip",
-      "sha256": "f4932f2f20b05d8e4dfad19db1ab5594a18b14b54037711e133c08f24e99a523"
+      "asset": "tailcat_0.8.0-quic_windows_arm64.zip",
+      "sha256": "0ab152e19e791adf675e5e38ced91cd6b586f998dc25fe4e827b34b3e373602b"
     }
   },
   "source_platforms": [

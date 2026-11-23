@@ -1,11 +1,11 @@
 #!/bin/sh
 # Install the QUIC fork only. No sudo, service startup, keys or firewall changes.
 # Usage: curl -fsSL .../install.sh | sh
-#        sh install.sh --version v0.7.0-quic.4 --bin-dir /custom/bin
+#        sh install.sh --version v0.8.0-quic --bin-dir /custom/bin
 set -eu
 
 tailcat_install() {
-    version=${TAILCAT_VERSION:-v0.7.0-quic.4}
+    version=${TAILCAT_VERSION:-v0.8.0-quic}
     bindir=${TAILCAT_BIN_DIR:-}
     dry_run=false
     while [ "$#" -gt 0 ]; do
