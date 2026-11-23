@@ -12,6 +12,7 @@ import (
 	"net/netip"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -583,7 +584,22 @@ func parseSOCKSUDP(t *testing.T, pkt []byte) []byte {
 
 func testLogger(t *testing.T, name string) logger.Logf {
 	t.Helper()
+	// Background work such as a portmapper UPnP probe against a real LAN
+	// router can still log after Client.Close returns. Logging through t
+	// after the test completes panics, so drop logs once cleanup runs.
+	var mu sync.Mutex
+	done := false
+	t.Cleanup(func() {
+		mu.Lock()
+		defer mu.Unlock()
+		done = true
+	})
 	return func(format string, args ...any) {
+		mu.Lock()
+		defer mu.Unlock()
+		if done {
+			return
+		}
 		t.Logf("["+name+"] "+format, args...)
 	}
 }
