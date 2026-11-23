@@ -24,7 +24,6 @@ import (
 
 	ssh "github.com/tailscale/gliderssh"
 	gossh "golang.org/x/crypto/ssh"
-	"tailscale.com/types/key"
 )
 
 const sshInteractiveMOTD = "🐈 Connected via tailcat SSH.\r\n"
@@ -52,6 +51,7 @@ func (s *Server) HandleTailscaleSSHConn(c net.Conn) {
 // sends a command, it is run by the user's shell (PowerShell on
 // Windows); otherwise an interactive login shell is started with a
 // PTY. The SFTP subsystem is served per opts.Files; see [SSHOptions].
+// Local TCP forwarding is also allowed to the server's loopback IP addresses.
 // With opts.Exec, every session instead runs that one command, and
 // nothing else is offered.
 func (s *Server) SSHConnHandler(opts SSHOptions) func(net.Conn) {
@@ -87,11 +87,21 @@ func (s *Server) SSHConnHandler(opts SSHOptions) func(net.Conn) {
 			subsystems["sftp"] = h
 		}
 		srv := &ssh.Server{
-			Handler:           handler,
-			PublicKeyHandler:  publicKeyHandler,
-			ChannelHandlers:   map[string]ssh.ChannelHandler{"session": ssh.DefaultSessionHandler},
+			Handler:          handler,
+			PublicKeyHandler: publicKeyHandler,
+			ChannelHandlers: map[string]ssh.ChannelHandler{
+				"session":      ssh.DefaultSessionHandler,
+				"direct-tcpip": ssh.DirectTCPIPHandler,
+			},
 			RequestHandlers:   map[string]ssh.RequestHandler{},
 			SubsystemHandlers: subsystems,
+			LocalPortForwardingCallback: func(ctx ssh.Context, host string, port uint32) bool {
+				// File-only and forced-command services must not grant access
+				// to other local services. Shell users already have that access.
+				// Require IP literals so forwarding never depends on DNS resolution.
+				return opts.Shell && port > 0 && port <= 65535 &&
+					net.ParseIP(host).IsLoopback()
+			},
 		}
 		if publicKeyHandler == nil {
 			srv.NoClientAuthHandler = func(ctx ssh.Context) error { return nil }
@@ -127,7 +137,7 @@ func (s *Server) sessionHandler(sess ssh.Session) {
 	// authenticated the peer by this key (and --allow, if set, gated on
 	// it), so a shell wrapper can tell which allowed peer it's talking
 	// to. The value matches --allow's format ("nodekey:...").
-	if k, ok := s.peerKeyForSession(sess); ok {
+	if k, ok := s.PeerKey(sess.RemoteAddr()); ok {
 		cmd.Env = append(cmd.Env, "TAILCAT_PEER_KEY="+k.String())
 	}
 
@@ -166,19 +176,6 @@ func (s *Server) execSessionHandler(argv []string) ssh.Handler {
 		}
 		runWithPipes(sess, cmd)
 	}
-}
-
-// peerKeyForSession returns the node public key of the peer on the
-// other end of sess. The session's remote address is the peer's
-// tailcat IP (derived from its key by tcAddrForKey); peerByIP reverses
-// that back to the key the tunnel authenticated. It returns ok=false
-// if the address can't be mapped to a known peer.
-func (s *Server) peerKeyForSession(sess ssh.Session) (key.NodePublic, bool) {
-	ta, ok := sess.RemoteAddr().(*net.TCPAddr)
-	if !ok {
-		return key.NodePublic{}, false
-	}
-	return s.lb.peerByIP(ta.AddrPort().Addr().Unmap())
 }
 
 // runWithPipes runs cmd with stdin/stdout/stderr pipes (no PTY).

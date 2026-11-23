@@ -54,6 +54,7 @@ import (
 	"github.com/fxamacker/cbor/v2"
 	go4mem "go4.org/mem"
 	"go4.org/netipx"
+	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/adapters/gonet"
 	"gvisor.dev/gvisor/pkg/tcpip/stack"
 	"gvisor.dev/gvisor/pkg/tcpip/transport/tcp"
@@ -158,6 +159,11 @@ type ConnInfo struct {
 	// name does not imply additional post-quantum confidentiality.
 	PresharedKey PresharedKey
 
+	// Hybrid mirrors upstream Tailcat's hybrid post-quantum WireGuard
+	// handshake flag. The H3 fork does not use WireGuard, so it never
+	// produces such codes and rejects any code or configuration that sets it.
+	Hybrid bool `json:",omitempty"`
+
 	// Region, if non-empty, lists the regions of a DERPMap.
 	// Either Region or RegionID must be set. If Region is set
 	// the client can avoid doing a lookup to discover the DERP map
@@ -194,6 +200,11 @@ const presharedKeyLen = 32
 // PresharedKey is the mandatory 256-bit H3 admission secret. The historical
 // name and storage encoding are retained; it is not a WireGuard device type.
 type PresharedKey [presharedKeyLen]byte
+
+// errHybridUnsupported is returned when a caller asks for upstream Tailcat's
+// hybrid post-quantum WireGuard handshake. This fork has no WireGuard data
+// plane; its H3 sessions are protected by QUIC's TLS 1.3 handshake instead.
+var errHybridUnsupported = errors.New("the hybrid WireGuard handshake (--hybrid) is not available in the H3 fork, which does not use WireGuard")
 
 // NewPresharedKey returns a cryptographically random H3 connection secret.
 func NewPresharedKey() (ret PresharedKey) {
@@ -334,9 +345,8 @@ type locoBackend struct {
 	tcpHandler     func([32]byte, netip.AddrPort) func(net.Conn)
 	bootstrapNonce [32]byte      // fresh per client lifetime; binds bootstrap acknowledgments
 	meowSlots      chan struct{} // bounded admission workers
-	admissionMu    sync.Mutex    // serializes admission and retired-peer cleanup
+	admissionMu    sync.Mutex    // serializes admission, disconnects and retired-peer cleanup
 	clientLeases   sync.Map      // key.NodePublic -> *h3ClientLease; callback-safe
-	nextClientID   tailcfg.NodeID
 
 	// discoPublic returns the node's disco public key, memoized to
 	// avoid redoing the curve25519 derivation for every client that
@@ -347,12 +357,17 @@ type locoBackend struct {
 	// peer map lookup. Set before createEngine.
 	onDERPRecv func(regionID tailcfg.DERPRegionID, src key.NodePublic, pkt []byte) bool
 
-	mu             sync.Mutex
-	clients        map[key.NodePublic]*tailcfg.Node // for the server
-	nm             *netmap.NetworkMap
-	allowedClients map[key.NodePublic]bool // or nil map for all
-	eps            []netip.AddrPort        // our current local UDP endpoints, sorted
-	closeOnce      sync.Once
+	// allowClient is the server's [Server.AllowClient] hook, or nil
+	// to allow all clients. Set before Start.
+	allowClient func(key.NodePublic) bool
+
+	mu           sync.Mutex
+	clients      map[key.NodePublic]*tailcfg.Node // for the server
+	nextClientID tailcfg.NodeID                   // for the server; never reused after a removal
+	pendingAllow map[key.NodePublic]bool          // client keys with an allowClient call in flight
+	nm           *netmap.NetworkMap
+	eps          []netip.AddrPort // our current local UDP endpoints, sorted
+	closeOnce    sync.Once
 }
 
 func (b *locoBackend) derpRegionID() tailcfg.DERPRegionID {
@@ -414,6 +429,11 @@ type Server struct {
 	// Setting it causes Start to fail; H3 credentials cannot be disabled.
 	DisablePresharedKey bool
 
+	// Hybrid exists for source compatibility with upstream Tailcat's
+	// experimental hybrid post-quantum WireGuard handshake. The H3 fork has
+	// no WireGuard handshake, so Start fails if Hybrid is set.
+	Hybrid bool
+
 	// Logf is the logger used for debug messages.
 	// If nil, log.Printf is used.
 	Logf logger.Logf
@@ -436,11 +456,31 @@ type Server struct {
 	// process-wide in-memory cache is used.
 	DERPMapCache DERPMapCache
 
-	// AllowedClients, if non-empty, restricts which client node keys
-	// may connect; all others are silently ignored. If empty, all
-	// clients are allowed. See [Server.AddAllowedClient] to add more
-	// at runtime.
-	AllowedClients []key.NodePublic
+	// AllowClient, if non-nil, reports whether the client with node
+	// key k may connect. It is consulted when a client that is not
+	// already connected announces itself. A client it rejects is
+	// silently ignored and is asked about again if it retries, which
+	// clients do about once a second while trying to connect. If nil,
+	// all clients are allowed.
+	//
+	// It is called without any server lock held and may block, for
+	// example on a lookup in another service, and may call other
+	// Server methods. At most one call per key is in flight at a time.
+	// Authenticated announcements are handled by a bounded pool of 32
+	// workers, so a hook that blocks for long can delay other clients
+	// once that pool is busy. Because a rejected client keeps retrying,
+	// an expensive hook should remember its negative answers itself.
+	//
+	// AllowClient decides admission only; it is not asked again about
+	// a connected client. Use [Server.DisconnectClient] to drop one.
+	// For a fixed or hand-maintained list of keys, use a [KeySet]:
+	//
+	//	var allow tailcat.KeySet
+	//	allow.Add(k)
+	//	s.AllowClient = allow.Contains
+	//
+	// It must be set before calling Start.
+	AllowClient func(k key.NodePublic) bool
 
 	lb *locoBackend // non-nil once Start has been called
 
@@ -558,9 +598,15 @@ const DefaultUDPIdleTimeout = 2 * time.Minute
 // It returns an error if the server was already started, including
 // implicitly by [Server.Listen].
 func (s *Server) Start() error {
+	return s.StartContext(context.Background())
+}
+
+// StartContext is Start with a context bounding relay discovery and startup.
+// Cancelling ctx after startup does not stop the server; use Close instead.
+func (s *Server) StartContext(ctx context.Context) error {
 	s.startMu.Lock()
 	defer s.startMu.Unlock()
-	return s.startLocked(context.Background())
+	return s.startLocked(ctx)
 }
 
 // startLocked implements Start, with ctx bounding the startup network
@@ -587,6 +633,9 @@ func (s *Server) startLocked(ctx context.Context) error {
 	} else if psk.IsZero() {
 		psk = NewPresharedKey()
 	}
+	if s.Hybrid {
+		return errHybridUnsupported
+	}
 	reg := s.Region
 	if reg == nil {
 		ci := &ConnInfo{RegionID: cmp.Or(s.RegionID, -1)}
@@ -610,23 +659,14 @@ func (s *Server) startLocked(ctx context.Context) error {
 	lb.logf = logf
 	lb.dm = &tailcfg.DERPMap{}
 	mak.Set(&lb.dm.Regions, reg.RegionID, reg)
-	for _, k := range s.AllowedClients {
-		mak.Set(&lb.allowedClients, k, true)
-	}
+	lb.allowClient = s.AllowClient
 
 	sys := &lb.sys
 	bus := eventbus.New()
 	sys.Set(bus)
 	sys.Set(health.NewTracker(bus))
 
-	netMon, err := netmon.New(bus, func(format string, args ...any) {
-		logf(format, args...)
-	})
-	if err != nil {
-		lb.Close() // closes the subsystems started so far
-		return fmt.Errorf("netmon.New: %w", err)
-	}
-	sys.Set(netMon)
+	sys.Set(newNetMon(bus, logf))
 
 	dialer := &tsdial.Dialer{Logf: logf} // mutated below (before used)
 	sys.Set(dialer)
@@ -976,19 +1016,39 @@ func tcpipStackOf(ns *netstack.Impl) *stack.Stack {
 	return reflect.NewAt(v.Type(), unsafe.Pointer(v.UnsafeAddr())).Elem().Interface().(*stack.Stack)
 }
 
-// AddAllowedClient adds k as an allowed client.
+// DisconnectClient drops the connected client with node key k, if
+// any, and reports whether it was connected. The server forgets the
+// client, withdraws its H3 authorization and source-address policy, and
+// tears down its H3 session. Unlike upstream Tailcat, whose WireGuard
+// connections stall until they time out, the client's open streams and
+// flows are reset.
 //
-// Until a key is allowed (here or via [Server.AllowedClients]), all
-// clients are allowed.
-func (s *Server) AddAllowedClient(k key.NodePublic) {
+// Nothing stops k from connecting again, so a caller revoking a
+// client should first make [Server.AllowClient] reject it (report
+// false for the key), before disconnecting the client.
+func (s *Server) DisconnectClient(k key.NodePublic) bool {
 	if s.lb == nil {
-		// Not yet started; applied at Start.
-		s.AllowedClients = append(s.AllowedClients, k)
-		return
+		return false // nothing is connected before Start
 	}
-	s.lb.mu.Lock()
-	defer s.lb.mu.Unlock()
-	mak.Set(&s.lb.allowedClients, k, true)
+	return s.lb.disconnectClient(k)
+}
+
+// disconnectClient removes k's admission and then resets its H3 peer.
+// admissionMu keeps k from being re-admitted before the reset completes,
+// and the engine is never called with b.mu held (see onMeow).
+func (b *locoBackend) disconnectClient(k key.NodePublic) bool {
+	b.admissionMu.Lock()
+	defer b.admissionMu.Unlock()
+	b.mu.Lock()
+	removed := b.removeClientLocked(k)
+	b.mu.Unlock()
+	if removed {
+		if e, ok := b.sys.Engine.GetOK(); ok {
+			// peerConfig no longer knows k, so this removes its H3 peer.
+			e.SyncDevicePeer(k)
+		}
+	}
+	return removed
 }
 
 // TailcatAddr returns the tailcat address that clients use to connect to this
@@ -1056,8 +1116,9 @@ func (ci *ConnInfo) Addr() Addr {
 	if !ci.ServerDiscoPublic.IsZero() {
 		w.ServerDiscoPublic = &ci.ServerDiscoPublic
 	}
+	w.Hybrid = ci.Hybrid // never set by this fork; ParseAddr rejects it
 	if !ci.PresharedKey.IsZero() {
-		w.PresharedKey = &ci.PresharedKey
+		w.PresharedKey = ci.PresharedKey[:]
 	}
 	for _, r := range ci.Region {
 		wr := wireRegionOf(r)
@@ -1105,9 +1166,21 @@ func (a Addr) Resolve(ctx context.Context, opts ...any) (Addr, error) {
 	if err := ci.Expand(ctx, opts...); err != nil {
 		return "", err
 	}
-	// Keep the address short: two relay nodes suffice.
+	// Keep the address short: two relay nodes suffice. STUN-only nodes
+	// are dropped by wireRegionOf when the address is encoded, so take
+	// the first two usable nodes here rather than a raw prefix of the
+	// region's node list, which STUN-only nodes may fill.
 	for _, r := range ci.Region {
-		r.Nodes = r.Nodes[:min(2, len(r.Nodes))]
+		var nodes []*tailcfg.DERPNode
+		for _, n := range r.Nodes {
+			if !n.STUNOnly {
+				nodes = append(nodes, n)
+				if len(nodes) == 2 {
+					break
+				}
+			}
+		}
+		r.Nodes = nodes
 	}
 	ci.RegionID = 0
 	return ci.Addr(), nil
@@ -1137,7 +1210,13 @@ func parseWire(addr Addr) (*wireConnInfo, error) {
 	if w.ServerPublic.IsZero() || w.ServerDiscoPublic == nil || w.ServerDiscoPublic.IsZero() {
 		return nil, errors.New("H3 connection code requires separate non-zero server and discovery keys")
 	}
-	if w.PresharedKey == nil || w.PresharedKey.IsZero() {
+	if w.Hybrid {
+		return nil, errHybridUnsupported
+	}
+	if len(w.PresharedKey) != presharedKeyLen {
+		return nil, fmt.Errorf("H3 connection code requires a %d-byte connection secret, got %d bytes", presharedKeyLen, len(w.PresharedKey))
+	}
+	if PresharedKey(w.PresharedKey).IsZero() {
 		return nil, errors.New("H3 connection code requires a non-zero connection secret")
 	}
 	return w, nil
@@ -1168,9 +1247,9 @@ func ParseAddr(addr Addr) (ConnInfo, error) {
 	if w.ServerDiscoPublic != nil {
 		ci.ServerDiscoPublic = *w.ServerDiscoPublic
 	}
-	if w.PresharedKey != nil {
-		ci.PresharedKey = *w.PresharedKey
-	}
+	// parseWire has already rejected hybrid codes and checked the
+	// connection secret's length.
+	copy(ci.PresharedKey[:], w.PresharedKey)
 	for i, wr := range w.Region {
 		// CBOR nulls decode to nil pointers, and addresses come from
 		// untrusted places (a pasted address, a "tailcat=" TXT record),
@@ -1403,6 +1482,25 @@ func (ci *ConnInfo) Expand(ctx context.Context, opts ...any) error {
 			return fmt.Errorf("fetching DERPMap for region %v: %w", ci.RegionID, err)
 		}
 	}
+	// A DERP map may come from an untrusted source (a provided map or a
+	// fetched URL). JSON nulls decode to nil pointers, which the region
+	// lookups and shuffles below dereference. Work on a copy that drops
+	// them, leaving the caller's map untouched.
+	cleaned := make(map[tailcfg.DERPRegionID]*tailcfg.DERPRegion, len(dm.Regions))
+	for rid, r := range dm.Regions {
+		if r == nil {
+			continue
+		}
+		c := *r
+		c.Nodes = nil
+		for _, n := range r.Nodes {
+			if n != nil {
+				c.Nodes = append(c.Nodes, n)
+			}
+		}
+		cleaned[rid] = &c
+	}
+	dm = &tailcfg.DERPMap{Regions: cleaned}
 	if ci.RegionID == -1 {
 		// Shuffle each DERP region's nodes.
 		for _, r := range dm.Regions {
@@ -1459,6 +1557,32 @@ func (b *locoBackend) peerConfig(k key.NodePublic) (_ []netip.Prefix, ok bool) {
 		return nil, false
 	}
 	return n.AllowedIPs, true
+}
+
+// PeerKey returns the node public key of the peer at remote, the
+// remote address of a connection or flow accepted by this server: the
+// net.Conn passed to [Server.OnTCP] or [Server.OnTCPForward], the
+// [ConnPacketConn] passed to [Server.OnUDP] or [Server.OnUDPForward],
+// or a connection from a [Server.Listen] listener.
+//
+// The tunnel has already authenticated the peer by this key, so a
+// caller can tell which peer it is serving: it is the key that
+// [Server.AllowClient] admitted. It reports ok=false if remote is
+// not a known peer's address.
+//
+// [Server.PeerEnv] reports the same key to served subprocesses as
+// TAILCAT_PEER_KEY.
+func (s *Server) PeerKey(remote net.Addr) (_ key.NodePublic, ok bool) {
+	var ap netip.AddrPort
+	switch a := remote.(type) {
+	case *net.TCPAddr:
+		ap = a.AddrPort()
+	case *net.UDPAddr:
+		ap = a.AddrPort()
+	default:
+		return key.NodePublic{}, false
+	}
+	return s.lb.peerByIP(ap.Addr().Unmap())
 }
 
 // peerByIP returns the public key of the peer that outbound packets
@@ -1593,6 +1717,14 @@ func (lb *locoBackend) Start() error {
 	mc := lb.sys.MagicSock.Get()
 	lb.logf("disco pub key: %v", mc.DiscoPublicKey())
 
+	// Mark the network up before SetPrivateKey and SetDERPMap, which
+	// start endpoint updates in the background. With no non-loopback
+	// interface (as in the Nix build sandbox) magicsock starts with
+	// the network down, and an endpoint update that runs while it is
+	// still down skips netcheck and never picks a home DERP. A server
+	// then isn't reachable through DERP until the periodic re-STUN
+	// 20-26s later, long after clients give up.
+	mc.SetNetworkUp(true)
 	mc.SetPrivateKey(lb.priv)
 	mc.SetDERPMap(lb.dm)
 
@@ -1648,12 +1780,16 @@ func (lb *locoBackend) Start() error {
 	mc.SetNetworkMap(nm.SelfNode, nm.Peers)
 	e.SetSelfNode(nm.SelfNode)
 	lb.sys.Netstack.Get().UpdateNetstackIPs(nm)
-	mc.SetNetworkUp(true)
 	lb.logf("NetworkMap: %v", logger.AsJSON(nm))
 
 	// Install live H3 peer authorization, source-address policy, and routing.
 	// The retained wgcfg structure carries local addresses, not WG peers.
-	e.SetPeerConfigFunc(lb.peerConfig)
+	e.SetPeerConfigFunc(func(k key.NodePublic) (wgcfg.PeerConfig, bool) {
+		// Only AllowedIPs is meaningful to the H3 device; the connection
+		// secret is checked in the TLS-bound H3 proof, not as a WG PSK.
+		allowedIPs, ok := lb.peerConfig(k)
+		return wgcfg.PeerConfig{AllowedIPs: allowedIPs}, ok
+	})
 	e.SetPeerSessionStateFunc(lb.onH3SessionState)
 	e.SetPeerPolicyFuncs(func(local, peer key.NodePublic) bool {
 		if local != lb.pub || peer.IsZero() || peer == local {
@@ -1703,16 +1839,41 @@ func (lb *locoBackend) Start() error {
 // onMeow admits an authenticated bootstrap announcement. H3 still requires
 // the TLS-bound node and connection-secret proof before application traffic.
 func (b *locoBackend) onMeow(src key.NodePublic, discoPub key.DiscoPublic) bool {
+	b.logf("got meow from %v", src.String())
+	if b.allowClient != nil {
+		b.mu.Lock()
+		if n, ok := b.clients[src]; ok {
+			b.mu.Unlock()
+			// Already admitted: AllowClient is not asked again.
+			return n.DiscoKey == discoPub
+		}
+		if b.pendingAllow[src] {
+			// An earlier meow from src is still waiting on the
+			// hook. Drop this one; src retries once a second.
+			b.mu.Unlock()
+			return false
+		}
+		// Ask the hook without b.mu or admissionMu held: it may block,
+		// and it may call Server methods such as DisconnectClient that
+		// take them. pendingAllow stays set until this admission is
+		// finished, so at most one hook call per key is in flight.
+		mak.Set(&b.pendingAllow, src, true)
+		b.mu.Unlock()
+		defer func() {
+			b.mu.Lock()
+			delete(b.pendingAllow, src)
+			b.mu.Unlock()
+		}()
+		if !b.allowClient(src) {
+			b.logf("ignoring meow from %v: rejected by AllowClient", src.String())
+			return false
+		}
+	}
+
 	b.admissionMu.Lock()
 	defer b.admissionMu.Unlock()
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	b.logf("got meow from %v", src.String())
-	if b.allowedClients != nil && !b.allowedClients[src] {
-		b.logf("ignoring meow from %v: not in allowedClients", src.String())
-		return false
-	}
-
 	if n, ok := b.clients[src]; ok {
 		// Discovery keys are deterministic for a node identity. Reject conflicts.
 		return n.DiscoKey == discoPub
@@ -1728,16 +1889,18 @@ func (b *locoBackend) onMeow(src key.NodePublic, discoPub key.DiscoPublic) bool 
 		// can consult our live peer policy. admissionMu prevents re-admission
 		// of this identity until teardown has completed.
 		b.mu.Unlock()
-		b.sys.Engine.Get().ResetDevicePeer(retired)
+		// peerConfig no longer knows retired, so this removes its H3 peer.
+		b.sys.Engine.Get().SyncDevicePeer(retired)
 		b.mu.Lock()
 	}
+	// The server is ID 1 and clients are IDs 2, 3, and so on. IDs
+	// are never reused after a client is retired or disconnected.
 	b.nextClientID = max(b.nextClientID+1, 2)
-	id := b.nextClientID // IDs remain unique after old clients are reclaimed.
+	id := b.nextClientID
 	lease := newH3ClientLease(time.Now())
 	b.clientLeases.Store(src, lease)
-	derpRegion := b.derpRegionID()
 	mak.Set(&b.clients, src, &tailcfg.Node{
-		ID:         tailcfg.NodeID(id),
+		ID:         id,
 		StableID:   tailcfg.StableNodeID(fmt.Sprint(id)),
 		Name:       fmt.Sprintf("client%d.tailcat.", id),
 		User:       100,
@@ -1745,9 +1908,24 @@ func (b *locoBackend) onMeow(src key.NodePublic, discoPub key.DiscoPublic) bool 
 		DiscoKey:   discoPub,
 		Addresses:  []netip.Prefix{pfxOf(tcAddrForKey(src))},
 		AllowedIPs: []netip.Prefix{pfxOf(tcAddrForKey(src))},
-		HomeDERP:   derpRegion,
+		HomeDERP:   b.derpRegionID(),
 	})
+	b.setNetworkMapLocked()
 
+	// The H3 device consults the live admission and source-address policy;
+	// a bootstrap acknowledgment does not establish an application session.
+
+	// Tell the new client our UDP endpoints so both sides can attempt
+	// a direct path. Async because advertiseEndpoints takes b.mu.
+	go b.advertiseEndpoints()
+	return true
+}
+
+// setNetworkMapLocked rebuilds the server's network map from
+// b.clients and pushes it to magicsock and netstack. b.mu must be
+// held.
+func (b *locoBackend) setNetworkMapLocked() {
+	derpRegion := b.derpRegionID()
 	nm := &netmap.NetworkMap{
 		NodeKey: b.pub,
 		SelfNode: (&tailcfg.Node{
@@ -1770,16 +1948,22 @@ func (b *locoBackend) onMeow(src key.NodePublic, discoPub key.DiscoPublic) bool 
 	})
 	b.nm = nm
 
-	mc := b.sys.MagicSock.Get()
-	mc.SetNetworkMap(nm.SelfNode, nm.Peers)
+	b.sys.MagicSock.Get().SetNetworkMap(nm.SelfNode, nm.Peers)
 	b.sys.Netstack.Get().UpdateNetstackIPs(nm)
+}
 
-	// The H3 device consults the live admission and source-address policy;
-	// a bootstrap acknowledgment does not establish an application session.
-
-	// Tell the new client our UDP endpoints so both sides can attempt
-	// a direct path. Async because advertiseEndpoints takes b.mu.
-	go b.advertiseEndpoints()
+// removeClientLocked forgets the connected client k, if any, dropping
+// it from the network map so magicsock and netstack no longer know
+// it, and withdrawing its H3 authorization (peerConfig). It reports
+// whether k was connected. b.mu must be held; the caller resets the
+// H3 peer after releasing b.mu.
+func (b *locoBackend) removeClientLocked(k key.NodePublic) bool {
+	if _, ok := b.clients[k]; !ok {
+		return false
+	}
+	delete(b.clients, k)
+	b.clientLeases.Delete(k)
+	b.setNetworkMapLocked()
 	return true
 }
 
@@ -1821,8 +2005,20 @@ func tcAddrForKey(k key.NodePublic) netip.Addr {
 	return netip.AddrFrom16(a)
 }
 
+// tcpTimeWaitTimeout is how long a closed TCP connection in the
+// netstack stays in TIME-WAIT, replacing gVisor's 60 second default.
+//
+// Each netstack carries only its own H3 tunnel to a single
+// peer, so a delayed duplicate segment arriving long after a close is
+// very unlikely. Meanwhile, TIME-WAIT endpoints cost memory, and while
+// one exists, gVisor's TCP forwarder drops a new SYN for the same
+// 4-tuple (gvisor/gvisor#15013), stalling dials that reuse a recent
+// ephemeral port. Five seconds still covers a few retransmissions of
+// the peer's FIN if our final ACK is lost.
+const tcpTimeWaitTimeout = 5 * time.Second
+
 func newNetstack(logf logger.Logf, sys *tsd.System) (*netstack.Impl, error) {
-	return netstack.Create(logf,
+	ns, err := netstack.Create(logf,
 		sys.Tun.Get(),
 		sys.Engine.Get(),
 		sys.MagicSock.Get(),
@@ -1830,6 +2026,31 @@ func newNetstack(logf logger.Logf, sys *tsd.System) (*netstack.Impl, error) {
 		sys.DNSManager.Get(),
 		sys.ProxyMapper(),
 	)
+	if err != nil {
+		return nil, err
+	}
+	opt := tcpip.TCPTimeWaitTimeoutOption(tcpTimeWaitTimeout)
+	if err := ns.SetTransportProtocolOption(tcp.ProtocolNumber, &opt); err != nil {
+		ns.Close()
+		return nil, fmt.Errorf("setting TCP TIME-WAIT timeout: %v", err)
+	}
+	return ns, nil
+}
+
+// netmonNew is netmon.New, replaced in tests.
+var netmonNew = netmon.New
+
+// newNetMon returns a network monitor for bus. If the OS network state
+// can't be monitored, such as in sandboxes without netlink access, it
+// returns a static monitor instead. Tailcat's userspace network stack
+// works without one; it just can't react to network changes.
+func newNetMon(bus *eventbus.Bus, logf logger.Logf) *netmon.Monitor {
+	netMon, err := netmonNew(bus, logf)
+	if err != nil {
+		logf("can't monitor network changes, continuing without: %v", err)
+		return netmon.NewStatic()
+	}
+	return netMon
 }
 
 // createEngine creates the wgengine.Engine with userspace networking.
@@ -1971,14 +2192,7 @@ func (c *Client) initLocked() error {
 	sys.Set(bus)
 	sys.Set(health.NewTracker(bus))
 
-	netMon, err := netmon.New(bus, func(format string, args ...any) {
-		logf(format, args...)
-	})
-	if err != nil {
-		lb.Close() // closes the subsystems started so far
-		return fmt.Errorf("netmon.New: %w", err)
-	}
-	sys.Set(netMon)
+	sys.Set(newNetMon(bus, logf))
 
 	dialer := &tsdial.Dialer{Logf: logf} // mutated below (before used)
 	sys.Set(dialer)
@@ -2063,14 +2277,31 @@ func (c *Client) PublicKey() key.NodePublic {
 	return c.nodeKeyLocked().Public()
 }
 
-// Close shuts down the client, closing the H3 engine and DERP connections.
-func (c *Client) Close() error {
+// DERPRegion returns the DERP region the client uses to reach the
+// server, once the client has started (see [Client.Dial] for what
+// starts it). Before then, or if the client failed to start, it
+// returns nil.
+func (c *Client) DERPRegion() *tailcfg.DERPRegion {
 	c.startMu.Lock()
 	defer c.startMu.Unlock()
-	if c.lb == nil {
+	if !c.started || len(c.ci.Region) == 0 {
+		return nil
+	}
+	return c.ci.Region[0]
+}
+
+// Close shuts down the client, closing the H3 engine and DERP connections.
+func (c *Client) Close() error {
+	// Don't hold startMu while closing the backend, so a slow
+	// netstack shutdown can't block other uses of c. The backend's
+	// Close is idempotent and safe to call concurrently.
+	c.startMu.Lock()
+	lb := c.lb
+	c.startMu.Unlock()
+	if lb == nil {
 		return nil // never used
 	}
-	return c.lb.Close()
+	return lb.Close()
 }
 
 // PingResult is the result of a successful [Client.Ping] call.

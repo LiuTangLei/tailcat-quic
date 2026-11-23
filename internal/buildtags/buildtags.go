@@ -28,8 +28,10 @@ import (
 // wasmKeep is the set of tailscale.com feature tags the wasm build
 // needs linked, following cmd/tsconnect/wasmbuild. tailcat uses the
 // data plane only, so it needs little: netstack for userspace TCP
-// (wasm has no kernel TUN) and nothing else. Omitting the rest
-// shrinks the wasm binary by about 6 MB (18%).
+// (wasm has no kernel TUN) and nothing else. In particular it omits
+// udptransport and nattraversal, since a browser has no UDP sockets
+// and reaches peers over DERP only. Omitting the rest shrinks the
+// wasm binary by about 6 MB (18%).
 var wasmKeep = []featuretags.FeatureTag{
 	"netstack",
 }
@@ -46,14 +48,29 @@ var wasmKeep = []featuretags.FeatureTag{
 // rooted shell, where a plain Go binary has no working DNS, no CA
 // roots, and no interface enumeration; those packages detect Android
 // at runtime and are inert elsewhere. The wasm build needs no roots
-// because the browser does its own TLS. Note that
-// featuretags.Requires pulls in ssh's c2n and dbus dependencies too.
+// because the browser does its own TLS. Native builds also keep
+// nattraversal (STUN, disco hole punching, and the peer relay
+// client), which pulls in udptransport (UDP sockets to peers at all);
+// without them magicsock is DERP-only, and direct paths between peers
+// are the whole point of tailcat. The wasm build omits both: a browser
+// has no UDP sockets, so all of its traffic is relayed over DERP
+// regardless. They keep useproxy too, so connections to DERP relays can
+// go through an HTTP proxy (HTTPS_PROXY, which tailcat's import of
+// tailscale.com/feature/useproxy enables) or a SOCKS5 ALL_PROXY, the
+// only way out of some sandboxes, such as ChatGPT Work's
+// (tailscale/tailscale#22412). They also keep qrcodes, for the
+// serve subcommand's --qr flag, which prints the server's tailcat
+// address as a terminal QR code. Note that featuretags.Requires pulls
+// in ssh's c2n and dbus dependencies too.
 var releaseKeep = []featuretags.FeatureTag{
 	"netstack",
 	"ssh",
 	"gro",
 	"bakedroots",
 	"androidbin",
+	"nattraversal",
+	"useproxy",
+	"qrcodes",
 }
 
 // WasmTags returns the comma-joined -tags value for the wasm build,

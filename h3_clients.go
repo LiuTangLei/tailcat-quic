@@ -79,7 +79,7 @@ func (b *locoBackend) onH3SessionState(peer key.NodePublic, state wgengine.PeerW
 
 // retireH3ClientLocked removes authorization for the oldest disconnected or
 // abandoned identity. Caller holds mu and admissionMu, then must drop mu and
-// ResetDevicePeer before allowing any re-admission of the retired key.
+// SyncDevicePeer before allowing any re-admission of the retired key.
 func (b *locoBackend) retireH3ClientLocked(now time.Time) (key.NodePublic, bool) {
 	var candidate key.NodePublic
 	var oldest time.Time

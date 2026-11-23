@@ -7,15 +7,18 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"maps"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/peterbourgon/ff/v4"
 	"github.com/peterbourgon/ff/v4/ffhelp"
 	"github.com/tailscale/tailcat"
+	"github.com/tailscale/tailcat/internal/localhostdns"
 	"tailscale.com/tstest"
 )
 
@@ -61,7 +64,7 @@ func TestHelpListsCommandTree(t *testing.T) {
 	tstest.AssertNotParallel(t) // newRootCommand rebinds global flag variables
 	help := ffhelp.Command(newRootCommand()).String()
 	for _, want := range []string{
-		"serve", "recv", "ping", "socks", "ssh", "cp", "parse", "resolve",
+		"serve", "recv", "ping", "perf", "socks", "ssh", "cp", "parse", "resolve",
 		"forward", "genkey", "printpub", "version", "readme",
 		"--serve", "--key", "--derpmap-url",
 	} {
@@ -75,7 +78,7 @@ func TestHelpListsCommandTree(t *testing.T) {
 	// Server-only flags live on the serve subcommand, not the root.
 	// (The long help prose may still mention them; only reject them
 	// as rendered flag entries.)
-	for _, notWant := range []string{"\n  --allow", "\n  --full-address", "\n  --psk", "\n  --ssh-authorized-keys"} {
+	for _, notWant := range []string{"\n  --allow", "\n  --full-address", "\n  --psk", "\n  --hybrid", "\n  --ssh-authorized-keys"} {
 		if strings.Contains(help, notWant) {
 			t.Errorf("root help lists server-only flag %q", strings.TrimSpace(notWant))
 		}
@@ -97,7 +100,7 @@ func TestServeHelpListsServerFlags(t *testing.T) {
 		t.Fatal("no serve subcommand")
 	}
 	help := ffhelp.Command(serve).String()
-	for _, want := range []string{"--allow", "--full-address", "--key", "--psk", "--ssh-authorized-keys"} {
+	for _, want := range []string{"--allow", "--full-address", "--hybrid", "--key", "--psk", "--ssh-authorized-keys"} {
 		if !strings.Contains(help, want) {
 			t.Errorf("serve help is missing %q", want)
 		}
@@ -207,7 +210,7 @@ func TestServeSSHAuthorizedKeysFlag(t *testing.T) {
 	if len(args) != 1 || args[0] != "ssh" {
 		t.Errorf("serve args = %q; want [ssh]", args)
 	}
-	_, services, err := parsePortSet("ssh")
+	_, services, _, _, err := parsePortSet("ssh")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -598,5 +601,152 @@ func TestGenkeyEmbedDERPMapUnknownRegion(t *testing.T) {
 	}
 	if !bytes.Contains(out, []byte("no DERP region 99999")) {
 		t.Errorf("output = %q; want it to name the missing region", out)
+	}
+}
+
+// TestParsePortSetTargets covers the "port:target" serve mappings:
+// a bare port target means that port on localhost, a host:port
+// target is kept as given (IPv6 in brackets), a socket target is
+// canonicalized to "unix:" and its path, and conflicting mappings of
+// one port are rejected, as is port 0 anywhere. It also covers
+// catch-all Unix sockets, given without a port.
+func TestParsePortSetTargets(t *testing.T) {
+	for _, tt := range []struct {
+		spec         string
+		wantPorts    []uint16
+		wantTargets  map[uint16]string
+		wantCatchAll string
+		wantErr      string
+	}{
+		{
+			spec:        "5555:10.2.200.213:5555",
+			wantPorts:   []uint16{5555},
+			wantTargets: map[uint16]string{5555: "10.2.200.213:5555"},
+		},
+		{
+			spec:        "8080:80,443",
+			wantPorts:   []uint16{443, 8080},
+			wantTargets: map[uint16]string{8080: "localhost:80"},
+		},
+		{
+			spec:        "5555:[fd7a::1]:5555",
+			wantPorts:   []uint16{5555},
+			wantTargets: map[uint16]string{5555: "[fd7a::1]:5555"},
+		},
+		{
+			spec:        "5555:android.lan:5555",
+			wantPorts:   []uint16{5555},
+			wantTargets: map[uint16]string{5555: "android.lan:5555"},
+		},
+		{
+			spec:        "5555:10.2.200.213:5555,5555:10.2.200.213:5555",
+			wantPorts:   []uint16{5555},
+			wantTargets: map[uint16]string{5555: "10.2.200.213:5555"},
+		},
+		{spec: "5555:10.2.200.213:5555,5555:10.2.200.214:5555", wantErr: "mapped to both"},
+		{spec: "5555:10.2.200.213", wantErr: "not a port or host:port"},
+		{spec: "0:10.2.200.213:5555", wantErr: "not a valid port"},
+		{spec: "5555:10.2.200.213:0", wantErr: "not a valid port"},
+		{spec: "5555:10.2.200.213:99999", wantErr: "not a valid port"},
+		{spec: "5555::5555", wantErr: "not a port or host:port"},
+		{spec: "http:10.2.200.213:5555", wantErr: "not a valid port"},
+		{spec: "0", wantErr: "not a valid port"},
+		{spec: "0-100", wantErr: "not a valid port"},
+		{spec: "100-0", wantErr: "not a valid port"},
+		{spec: "5555:0", wantErr: "not a valid port"},
+		{spec: "5555:65536", wantErr: "not a valid port"},
+		{spec: "5555:99999", wantErr: "not a valid port"},
+		{
+			spec:        "8022:/run/annex.sock",
+			wantPorts:   []uint16{8022},
+			wantTargets: map[uint16]string{8022: "unix:/run/annex.sock"},
+		},
+		{
+			// A path may contain colons; only the first one splits.
+			spec:        "8022:/run/a:b.sock",
+			wantPorts:   []uint16{8022},
+			wantTargets: map[uint16]string{8022: "unix:/run/a:b.sock"},
+		},
+		{
+			spec:        "8022:unix:rel.sock",
+			wantPorts:   []uint16{8022},
+			wantTargets: map[uint16]string{8022: "unix:rel.sock"},
+		},
+		{
+			// Any target starting with "unix:" is a socket, even
+			// one that looks like a host named "unix" and a port.
+			spec:        "8022:unix:80",
+			wantPorts:   []uint16{8022},
+			wantTargets: map[uint16]string{8022: "unix:80"},
+		},
+		{
+			spec:         "/run/annex.sock",
+			wantPorts:    []uint16{},
+			wantTargets:  map[uint16]string{},
+			wantCatchAll: "unix:/run/annex.sock",
+		},
+		{
+			spec:         "unix:rel.sock",
+			wantPorts:    []uint16{},
+			wantTargets:  map[uint16]string{},
+			wantCatchAll: "unix:rel.sock",
+		},
+		{
+			spec:         "22, /run/a:b.sock ,8080:80",
+			wantPorts:    []uint16{22, 8080},
+			wantTargets:  map[uint16]string{8080: "localhost:80"},
+			wantCatchAll: "unix:/run/a:b.sock",
+		},
+		{spec: "unix:", wantErr: "no Unix socket path"},
+		{spec: "8022:unix:", wantErr: "no Unix socket path"},
+		{spec: "/a.sock,/b.sock", wantErr: "more than one Unix socket"},
+		{spec: "/a.sock,exec", wantErr: "exec service"},
+		{spec: "exit-node,/a.sock", wantErr: "exit-node service"},
+		{spec: "all,/a.sock", wantErr: `"all"`},
+		{spec: "run/a.sock", wantErr: "is not a port"},
+	} {
+		ports, _, targets, catchAll, err := parsePortSet(tt.spec)
+		if tt.wantErr != "" {
+			if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+				t.Errorf("parsePortSet(%q) error = %v; want one containing %q", tt.spec, err, tt.wantErr)
+			}
+			continue
+		}
+		if err != nil {
+			t.Errorf("parsePortSet(%q): %v", tt.spec, err)
+			continue
+		}
+		if got := slices.Sorted(maps.Keys(ports)); !slices.Equal(got, tt.wantPorts) {
+			t.Errorf("parsePortSet(%q) ports = %v; want %v", tt.spec, got, tt.wantPorts)
+		}
+		if !maps.Equal(targets, tt.wantTargets) {
+			t.Errorf("parsePortSet(%q) targets = %v; want %v", tt.spec, targets, tt.wantTargets)
+		}
+		if catchAll != tt.wantCatchAll {
+			t.Errorf("parsePortSet(%q) catch-all = %q; want %q", tt.spec, catchAll, tt.wantCatchAll)
+		}
+	}
+}
+
+// TestTargetDialer checks that only localhost targets are dialed
+// through localhostdns.Resolver. It answers every other name with
+// NXDOMAIN, so a mapping to a LAN hostname like "5555:android.lan:5555"
+// could never connect through it.
+func TestTargetDialer(t *testing.T) {
+	for _, tt := range []struct {
+		target    string
+		wantLocal bool
+	}{
+		{"localhost:80", true},
+		{"LocalHost.:80", true},
+		{"app.localhost:80", true},
+		{"android.lan:5555", false},
+		{"db.example.com:5432", false},
+		{"notlocalhost:80", false},
+	} {
+		d := targetDialer(tt.target)
+		if gotLocal := d.Resolver == localhostdns.Resolver; gotLocal != tt.wantLocal {
+			t.Errorf("targetDialer(%q) uses localhostdns.Resolver = %v; want %v", tt.target, gotLocal, tt.wantLocal)
+		}
 	}
 }

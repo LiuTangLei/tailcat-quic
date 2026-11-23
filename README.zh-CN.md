@@ -89,6 +89,11 @@ tailcat serve --ssh-authorized-keys ~/.ssh/authorized_keys ssh
 | 检查连接路径 | `tailcat ping 'tch3…'` |
 | 共享多个端口 | `tailcat serve 8080,8443` |
 | 每次连接运行一个程序 | `tailcat serve exec -- /path/to/program arg1` |
+| 转发服务器局域网内的主机 | `tailcat serve 5555:192.168.1.20:5555` |
+| 暴露本地 Unix socket | `tailcat serve /run/app.sock` |
+| 以二维码显示地址 | `tailcat serve --qr 8080` |
+| 记录客户端和连接日志 | `tailcat serve --log 8080` |
+| 测试吞吐量 | 服务器：`tailcat serve perf`；客户端：`tailcat perf 'tch3…'` |
 | 通过 SOCKS 代理访问 | `tailcat socks 'tch3…' curl http://server.tailcat:8080/` |
 | 重启后保留服务器地址 | `tailcat genkey --key=default` |
 | 查看参数 | `tailcat --help` 或 `tailcat <command> --help` |

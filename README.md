@@ -89,6 +89,11 @@ Then connect with `tailcat ssh 'tch3…'`. Alternatively, expose an existing SSH
 | Check the connection path | `tailcat ping 'tch3…'` |
 | Share several ports | `tailcat serve 8080,8443` |
 | Run a command per connection | `tailcat serve exec -- /path/to/program arg1` |
+| Proxy a host on the server's LAN | `tailcat serve 5555:192.168.1.20:5555` |
+| Expose a local Unix socket | `tailcat serve /run/app.sock` |
+| Show the address as a QR code | `tailcat serve --qr 8080` |
+| Log connecting clients and flows | `tailcat serve --log 8080` |
+| Measure throughput | Server: `tailcat serve perf`; client: `tailcat perf 'tch3…'` |
 | Use a SOCKS proxy | `tailcat socks 'tch3…' curl http://server.tailcat:8080/` |
 | Keep a server address across restarts | `tailcat genkey --key=default` |
 | Read command options | `tailcat --help` or `tailcat <command> --help` |

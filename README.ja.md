@@ -89,6 +89,11 @@ tailcat serve --ssh-authorized-keys ~/.ssh/authorized_keys ssh
 | 接続経路を確認 | `tailcat ping 'tch3…'` |
 | 複数ポートを共有 | `tailcat serve 8080,8443` |
 | 接続ごとにコマンドを実行 | `tailcat serve exec -- /path/to/program arg1` |
+| サーバー側 LAN のホストへ転送 | `tailcat serve 5555:192.168.1.20:5555` |
+| ローカルの Unix ソケットを公開 | `tailcat serve /run/app.sock` |
+| アドレスを QR コードで表示 | `tailcat serve --qr 8080` |
+| 接続クライアントとフローを記録 | `tailcat serve --log 8080` |
+| スループットを測定 | サーバー: `tailcat serve perf`、クライアント: `tailcat perf 'tch3…'` |
 | SOCKS 経由でアクセス | `tailcat socks 'tch3…' curl http://server.tailcat:8080/` |
 | 再起動後も同じアドレスを使う | `tailcat genkey --key=default` |
 | ヘルプ | `tailcat --help` または `tailcat <command> --help` |
