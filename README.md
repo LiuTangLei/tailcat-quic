@@ -6,7 +6,7 @@ Connect two machines, forward a port, or send a file with a connection address. 
 
 This independent fork of [Tailcat](https://github.com/tailscale/tailcat) uses authenticated QUIC/HTTP/3 with BBRv3. The command is still `tailcat`, with the same everyday workflow as upstream. **Both ends need Tailcat-QUIC**: its `tch3…` addresses are incompatible with upstream's `tc…` addresses.
 
-[Latest release: v0.7.0-quic.4](https://github.com/LiuTangLei/tailcat-quic/releases/tag/v0.7.0-quic.4)
+[Latest release](https://github.com/LiuTangLei/tailcat-quic/releases/latest)
 
 ## Install
 

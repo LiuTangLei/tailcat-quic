@@ -7,6 +7,7 @@ in the source checkout. This command does not publish or edit a release.
 """
 import argparse
 import hashlib
+import json
 import os
 from pathlib import Path
 import platform
@@ -21,7 +22,33 @@ def run(command, **kwargs):
     return subprocess.run(command, check=True, text=True, **kwargs)
 
 
-def verify(assets, tag, revision):
+def release_module_pins(revision):
+    names = (
+        "tailscale.com",
+        "github.com/quic-go/quic-go",
+        "github.com/refraction-networking/utls",
+        "github.com/LiuTangLei/wireguard-go",
+    )
+    env = {**os.environ, "GOWORK": "off"}
+    pins = []
+    with tempfile.TemporaryDirectory(prefix="tailcat-release-modules-") as directory:
+        for filename in ("go.mod", "go.sum"):
+            source = run(["git", "show", f"{revision}:{filename}"], capture_output=True).stdout
+            (Path(directory) / filename).write_text(source)
+        for name in names:
+            result = run(["go", "list", "-mod=readonly", "-m", "-json", name],
+                         cwd=directory, env=env, stdout=subprocess.PIPE)
+            module = json.loads(result.stdout)
+            selected = module.get("Replace") or module
+            if not selected.get("Version") or not selected.get("Sum"):
+                raise ValueError("release dependency lacks a public version or checksum: " + name)
+            pins.append(("=>" if "Replace" in module else "dep",
+                         selected["Path"], selected["Version"], selected["Sum"]))
+    return pins
+
+
+def verify(assets, tag, revision, pins):
+    env = {**os.environ, "GOWORK": "off"}
     checksums = {}
     for line in (assets / "checksums.txt").read_text().splitlines():
         digest, name = line.split(maxsplit=1)
@@ -85,19 +112,21 @@ def verify(assets, tag, revision):
         output = run([str(executable), "version"], capture_output=True).stdout.strip()
         if output != tag:
             raise ValueError("packaged executable has the wrong version: " + output)
-        info = "\n".join(run(["go", "version", "-m", str(executable)], capture_output=True).stdout.splitlines()[1:])
-        for marker in ["github.com/LiuTangLei/quic-go\tv0.65.0-quic.4",
-                       "github.com/LiuTangLei/tailscale\tv1.102.5-tailcat.2",
-                       "github.com/LiuTangLei/utls\tv1.8.3-0.20261021023852-7effde6a93dc",
-                       "github.com/LiuTangLei/wireguard-go\tv0.0.33-0.20260910045057-ed22747d204e",
-                       "vcs.revision=" + revision, "vcs.modified=false"]:
-            if marker not in info:
-                raise ValueError("packaged build identity is missing: " + marker)
-        if "tailcat_perf" in info or "/Users/lei" in info:
+        version_output = run(["go", "version", "-m", str(executable)], env=env, capture_output=True).stdout
+        # The first line names the extracted executable, not a build dependency.
+        info = "\n".join(version_output.splitlines()[1:])
+        # Go indents replacement records an extra tab within each dep record.
+        records = {tuple(line.lstrip("\t").split("\t")) for line in info.splitlines()}
+        for pin in pins:
+            if pin not in records:
+                raise ValueError("packaged dependency does not match release source: " + pin[1])
+        if ("build", "vcs.revision=" + revision) not in records or ("build", "vcs.modified=false") not in records:
+            raise ValueError("packaged source revision does not match clean release source")
+        local = any(record[0] == "=>" and (len(record) != 4 or not record[3].startswith("h1:"))
+                    for record in records)
+        if local or "tailcat_perf" in info or "/Users/lei" in info:
             raise ValueError("package contains diagnostic tags or a local dependency path")
         print("Verified native package:", system, arch, output, revision, flush=True)
-        env = os.environ.copy()
-        env["GOWORK"] = "off"
         env["TS_DISABLE_PORTMAPPER"] = "true"
         env["TAILCAT_TEST_BINARY"] = str(executable)
         run(["go", "test", "-count=1", "-timeout=5m", "./cmd/tailcat"], env=env, timeout=360)
@@ -114,12 +143,13 @@ def main():
     if not re.fullmatch(r"v[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?", args.tag):
         parser.error("unexpected release tag")
     revision = run(["git", "rev-parse", "--verify", (args.revision or "HEAD") + "^{commit}"], capture_output=True).stdout.strip()
+    pins = release_module_pins(revision)
     if args.assets:
-        verify(args.assets.resolve(), args.tag, revision)
+        verify(args.assets.resolve(), args.tag, revision, pins)
     else:
         with tempfile.TemporaryDirectory(prefix="tailcat-release-assets-") as directory:
             run(["gh", "release", "download", args.tag, "--repo", args.repo, "--dir", directory], timeout=180)
-            verify(Path(directory), args.tag, revision)
+            verify(Path(directory), args.tag, revision, pins)
 
 
 if __name__ == "__main__":

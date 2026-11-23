@@ -35,8 +35,9 @@ def main() -> None:
     p.add_argument('--udp-probe', action='store_true')
     p.add_argument('--linux-packages', action='store_true', help='also build .deb/.rpm locally with pinned nFPM')
     a = p.parse_args()
-    if not re.fullmatch(r'v\d+\.\d+\.\d+(?:-quic\.\d+)?', a.version):
-        p.error('use an ordinary version or quic.N suffix, never h3.N')
+    if not re.fullmatch(r'v\d+\.\d+\.\d+(?:-quic(?:\.\d+)?)?', a.version):
+        p.error('use a release version such as v0.8.0-quic')
+    os.environ['GOWORK'] = 'off'
     root, out = Path.cwd().resolve(), a.output.resolve()
     if out == root or root in out.parents:
         p.error('output must be outside the checkout')

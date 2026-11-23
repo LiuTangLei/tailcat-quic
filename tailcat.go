@@ -364,7 +364,7 @@ type locoBackend struct {
 	mu           sync.Mutex
 	clients      map[key.NodePublic]*tailcfg.Node // for the server
 	nextClientID tailcfg.NodeID                   // for the server; never reused after a removal
-	pendingAllow map[key.NodePublic]bool          // client keys with an allowClient call in flight
+	pendingAllow map[key.NodePublic]bool          // in-flight admission, false if disconnected while pending
 	nm           *netmap.NetworkMap
 	eps          []netip.AddrPort // our current local UDP endpoints, sorted
 	closeOnce    sync.Once
@@ -1021,7 +1021,7 @@ func tcpipStackOf(ns *netstack.Impl) *stack.Stack {
 // client, withdraws its H3 authorization and source-address policy, and
 // tears down its H3 session. Unlike upstream Tailcat, whose WireGuard
 // connections stall until they time out, the client's open streams and
-// flows are reset.
+// flows are reset. A pending admission decision for k is also invalidated.
 //
 // Nothing stops k from connecting again, so a caller revoking a
 // client should first make [Server.AllowClient] reject it (report
@@ -1040,6 +1040,9 @@ func (b *locoBackend) disconnectClient(k key.NodePublic) bool {
 	b.admissionMu.Lock()
 	defer b.admissionMu.Unlock()
 	b.mu.Lock()
+	if _, pending := b.pendingAllow[k]; pending {
+		b.pendingAllow[k] = false
+	}
 	removed := b.removeClientLocked(k)
 	b.mu.Unlock()
 	if removed {
@@ -1847,7 +1850,7 @@ func (b *locoBackend) onMeow(src key.NodePublic, discoPub key.DiscoPublic) bool 
 			// Already admitted: AllowClient is not asked again.
 			return n.DiscoKey == discoPub
 		}
-		if b.pendingAllow[src] {
+		if _, pending := b.pendingAllow[src]; pending {
 			// An earlier meow from src is still waiting on the
 			// hook. Drop this one; src retries once a second.
 			b.mu.Unlock()
@@ -1874,6 +1877,9 @@ func (b *locoBackend) onMeow(src key.NodePublic, discoPub key.DiscoPublic) bool 
 	defer b.admissionMu.Unlock()
 	b.mu.Lock()
 	defer b.mu.Unlock()
+	if b.allowClient != nil && !b.pendingAllow[src] {
+		return false // disconnected while the admission decision was pending
+	}
 	if n, ok := b.clients[src]; ok {
 		// Discovery keys are deterministic for a node identity. Reject conflicts.
 		return n.DiscoKey == discoPub

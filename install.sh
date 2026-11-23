@@ -15,11 +15,11 @@ tailcat_install() {
                 case "$1" in --version) version=$2;; --bin-dir) bindir=$2;; esac
                 shift 2 ;;
             --dry-run) dry_run=true; shift ;;
-            -h|--help) echo 'Usage: install.sh [--version vX.Y.Z-quic.N] [--bin-dir PATH] [--dry-run]'; return 0 ;;
+            -h|--help) echo 'Usage: install.sh [--version vX.Y.Z-quic] [--bin-dir PATH] [--dry-run]'; return 0 ;;
             *) echo "Unknown argument: $1" >&2; return 2 ;;
         esac
     done
-    printf '%s\n' "$version" | LC_ALL=C grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-quic\.[0-9]+)?$' || {
+    printf '%s\n' "$version" | LC_ALL=C grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-quic(\.[0-9]+)?)?$' || {
         echo 'Invalid QUIC release version.' >&2; return 2;
     }
     case "$(uname -s)" in

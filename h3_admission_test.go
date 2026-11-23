@@ -107,3 +107,51 @@ func TestAllowClientMayCallServer(t *testing.T) {
 		t.Errorf("AllowClient calls went from %d to %d for an admitted client", before, after)
 	}
 }
+
+func TestDisconnectClientInvalidatesPendingApproval(t *testing.T) {
+	t.Parallel()
+
+	dm := integration.RunDERPAndSTUN(t, mkLogger(t, "derpstun"), "127.0.0.1")
+	peer := key.NewNode().Public()
+	disco := key.NewDisco().Public()
+	var allow KeySet
+	allow.Add(peer)
+	var first atomic.Bool
+	entered := make(chan struct{})
+	resume := make(chan struct{})
+	s := &Server{
+		Logf:   mkLogger(t, "server"),
+		Region: dm.Regions[1],
+		AllowClient: func(k key.NodePublic) bool {
+			allowed := allow.Contains(k)
+			if first.CompareAndSwap(false, true) {
+				close(entered)
+				<-resume
+			}
+			return allowed
+		},
+	}
+	if err := s.Start(); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { s.Close() })
+	result := make(chan bool, 1)
+	go func() { result <- s.lb.onMeow(peer, disco) }()
+	<-entered
+	allow.Remove(peer)
+	connected := s.DisconnectClient(peer)
+	close(resume)
+	if connected {
+		t.Error("DisconnectClient reported an admission in progress as connected")
+	}
+	if <-result {
+		t.Fatal("admission was granted by a revoked approval")
+	}
+	if _, ok := s.lb.peerConfig(peer); ok {
+		t.Fatal("the revoked peer was authorized for H3")
+	}
+	allow.Add(peer)
+	if !s.lb.onMeow(peer, disco) {
+		t.Fatal("a fresh approval failed after the pending decision was invalidated")
+	}
+}

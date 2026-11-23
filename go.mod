@@ -1,11 +1,7 @@
 module github.com/tailscale/tailcat
 
-// TEMPORARY local Tailcat core pin for pre-release testing of v0.8.0-quic.
-// The core is LiuTangLei/tailscale v1.104.7 plus the upstream tailscale.com
-// fixes Tailcat 0.8.0 needs (branch tailcat/core-v1.104.7). Replace this with
-// the published, immutable github.com/LiuTangLei/tailscale v1.104.7-tailcat.1
-// tag before any release; release checks reject local paths.
-replace tailscale.com => ../tailscale-all/tailcat-core-0.8.0
+// Tailcat's H3 core is based on v1.104.7 with the backports used by Tailcat 0.8.0.
+replace tailscale.com => github.com/LiuTangLei/tailscale v1.104.7-tailcat.1
 
 replace github.com/quic-go/quic-go => github.com/LiuTangLei/quic-go v0.65.0-quic.4
 

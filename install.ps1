@@ -8,7 +8,7 @@ param(
     [switch]$DryRun
 )
 $ErrorActionPreference = 'Stop'
-if ($Version -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+(-quic\.[0-9]+)?$') { throw 'Invalid QUIC release version.' }
+if ($Version -notmatch '^v[0-9]+\.[0-9]+\.[0-9]+(-quic(\.[0-9]+)?)?$') { throw 'Invalid QUIC release version.' }
 if (-not [IO.Path]::IsPathRooted($InstallDir)) { throw 'InstallDir must be absolute.' }
 $nativeArch = if ($env:PROCESSOR_ARCHITEW6432) { $env:PROCESSOR_ARCHITEW6432 } else { $env:PROCESSOR_ARCHITECTURE }
 switch ($nativeArch.ToUpperInvariant()) {

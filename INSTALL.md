@@ -1,6 +1,6 @@
 # Install Tailcat-QUIC
 
-Install on both machines, then use `tailcat` as shown in the [quick start](README.md#quick-start). The current release is [v0.7.0-quic.4](https://github.com/LiuTangLei/tailcat-quic/releases/tag/v0.7.0-quic.4).
+Install on both machines, then use `tailcat` as shown in the [quick start](README.md#quick-start). See the [latest release](https://github.com/LiuTangLei/tailcat-quic/releases/latest).
 
 ## Linux and macOS
 
@@ -14,7 +14,7 @@ If the fallback directory is not on `PATH`, the installer prints the directory t
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/LiuTangLei/tailcat-quic/quic-v0.7/install.sh -o /tmp/tailcat-install.sh
-sh /tmp/tailcat-install.sh --version v0.7.0-quic.4 --bin-dir "$HOME/.local/bin"
+sh /tmp/tailcat-install.sh --version v0.8.0-quic --bin-dir "$HOME/.local/bin"
 ```
 
 ## Windows
@@ -37,7 +37,7 @@ Download from [Releases](https://github.com/LiuTangLei/tailcat-quic/releases/lat
 | macOS | Intel, Apple Silicon | tar.gz |
 | Windows | amd64, arm64 | ZIP |
 
-Archives contain the `tailcat` executable and documentation. For DEB/RPM, install the downloaded package with your usual package manager, for example `sudo apt install ./tailcat-quic_0.7.0-quic.4_amd64.deb` or `sudo dnf install ./tailcat-quic_0.7.0-quic.4_amd64.rpm`.
+Archives contain the `tailcat` executable and documentation. For DEB/RPM, install the downloaded package with your usual package manager, for example `sudo apt install ./tailcat-quic_0.8.0-quic_amd64.deb` or `sudo dnf install ./tailcat-quic_0.8.0-quic_amd64.rpm`.
 
 Both the official package and this fork provide a command named `tailcat`; choose which one your machines use. The packages do not start a background service.
 
@@ -70,14 +70,14 @@ nix profile install github:LiuTangLei/tailcat-quic/quic-v0.7#tailcat-quic
 docker run --rm -i ghcr.io/liutanglei/tailcat-quic:latest
 ```
 
-Linux amd64 and arm64 images are available. Use `:v0.7.0-quic.4` to pin a version. Keep `-i` for stdin; omit `-t` when transferring data, because a terminal can mix status messages into the byte stream.
+Linux amd64 and arm64 images are available. Use `:v0.8.0-quic` to pin a version. Keep `-i` for stdin; omit `-t` when transferring data, because a terminal can mix status messages into the byte stream.
 
 ## Build from source
 
-With Go 1.27.1 or newer:
+Use the Go version declared in the source's `go.mod`. Tailcat `v0.8.0-quic` uses Go 1.27.4.
 
 ```sh
-go run github.com/LiuTangLei/tailcat-quic/install@v0.7.0-quic.4
+go run github.com/LiuTangLei/tailcat-quic/install@v0.8.0-quic
 ```
 
 This builds the pinned source and installs `tailcat` to `GOBIN` or `GOPATH/bin`. It also supports source builds on FreeBSD and OpenBSD. The small bootstrap handles this fork's dependency replacements; direct `go install …/cmd/tailcat@version` does not support them.
@@ -85,9 +85,9 @@ This builds the pinned source and installs `tailcat` to `GOBIN` or `GOPATH/bin`.
 To build from a checkout instead:
 
 ```sh
-git clone --branch v0.7.0-quic.4 --depth 1 https://github.com/LiuTangLei/tailcat-quic.git
+git clone --branch v0.8.0-quic --depth 1 https://github.com/LiuTangLei/tailcat-quic.git
 cd tailcat-quic
-go build -trimpath -tags "$(cat build-tags.txt)" -ldflags='-X main.version=v0.7.0-quic.4' -o tailcat ./cmd/tailcat
+go build -trimpath -tags "$(cat build-tags.txt)" -ldflags='-X main.version=v0.8.0-quic' -o tailcat ./cmd/tailcat
 ```
 
 Android/Termux uses the CLI's Linux runtime helpers; it is not an Android VPN app. Browser/WASM is covered under [Experimental features](docs/experimental.md).

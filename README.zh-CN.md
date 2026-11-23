@@ -6,7 +6,7 @@
 
 这是 [Tailcat](https://github.com/tailscale/tailcat) 的独立分支，使用经过认证的 QUIC/HTTP/3 和 BBRv3，命令仍叫 `tailcat`，日常用法与官方版一致。**两端都需要安装 Tailcat-QUIC**：本版的 `tch3…` 地址与官方版的 `tc…` 地址不兼容。
 
-[最新版本：v0.7.0-quic.4](https://github.com/LiuTangLei/tailcat-quic/releases/tag/v0.7.0-quic.4)
+[最新版本](https://github.com/LiuTangLei/tailcat-quic/releases/latest)
 
 ## 安装
 

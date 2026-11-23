@@ -6,7 +6,7 @@
 
 [Tailcat](https://github.com/tailscale/tailcat) の独立フォークで、認証付き QUIC/HTTP/3 と BBRv3 を使用します。コマンド名は `tailcat` のままで、普段の操作は公式版と同じです。**両端に Tailcat-QUIC が必要です**。本版の `tch3…` アドレスと公式版の `tc…` アドレスには互換性がありません。
 
-[最新リリース: v0.7.0-quic.4](https://github.com/LiuTangLei/tailcat-quic/releases/tag/v0.7.0-quic.4)
+[最新リリース](https://github.com/LiuTangLei/tailcat-quic/releases/latest)
 
 ## インストール
 

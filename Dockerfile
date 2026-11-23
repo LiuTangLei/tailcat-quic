@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # Multi-arch runtime image for tailcat-quic. The application is built from the
 # selected Git tag/commit; no release binary is downloaded during the build.
-FROM --platform=$BUILDPLATFORM golang:1.27.1-bookworm AS build
+FROM --platform=$BUILDPLATFORM golang:1.27.4-bookworm AS build
 
 ARG TARGETOS=linux
 ARG TARGETARCH

@@ -1,15 +1,13 @@
 # tailcat-quic changelog
 
-## v0.8.0-quic.1 (unreleased candidate)
+## v0.8.0-quic
 
 - Merge upstream Tailcat v0.8.0: `serve` port mappings to LAN hosts or other local ports, Unix-domain socket targets, `serve --qr`, `serve --log`, the `perf` command and service, SSH local forwarding to loopback, `cp`/`ssh -i`, the C shared library (`cmd/libtailcat`), `GOOS=android` Termux builds (not yet in the release package set), DERP-over-WebSocket and HTTPS/SOCKS proxy egress, plus upstream's crash and hang fixes. See the upstream v0.8.0 notes below.
 - Adopt upstream's breaking Go API change: `Server.AllowClient` hook and `KeySet` replace `AllowedClients`/`AddAllowedClient`. The hook runs without server locks; H3 admission keeps its bounded 32-worker pool, retirement and per-key single flight.
-- `Server.DisconnectClient` withdraws the client's H3 authorization and resets its session, so its open streams and flows end instead of stalling as in upstream.
+- `Server.DisconnectClient` withdraws the client's H3 authorization, resets its open H3 streams and flows, and invalidates an admission decision still in progress.
 - Upstream's experimental `--hybrid` post-quantum WireGuard handshake does not apply to the H3 transport, which has no WireGuard device. `serve --hybrid`, `Server.Hybrid` and hybrid connection codes are rejected with a clear error.
-- Keep the unreleased quic.5 work: failed TCP proxy copies abort the reliable H3 stream instead of hanging the reverse copy, two fewer helper goroutines per proxied connection, and reliable-stream backpressure diagnostics. QUIC stays on `v0.65.0-quic.4` with the uTLS fork.
+- Failed TCP proxy copies abort the reliable H3 stream and release the reverse copy. Each proxied connection uses two fewer helper goroutines. Reliable streams report backpressure diagnostics. QUIC uses `v0.65.0-quic.4` with the uTLS fork.
 - Move the Tailcat core to LiuTangLei/tailscale v1.104.7 with backports of the upstream tailscale.com fixes Tailcat 0.8.0 relies on: static network monitors without netlink, `ALL_PROXY` with netns disabled, `feature/derpwebsocket`, and non-blocking netstack outbound queues so Close cannot deadlock.
-
-Speed is not claimed to change; this candidate is about upstream features, correctness and dependency currency.
 
 ## v0.7.0-quic.4 (2026-09-27)
 
